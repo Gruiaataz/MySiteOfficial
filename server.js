@@ -1,4 +1,4 @@
-```javascript
+
 require('dotenv').config();
 
 const express = require('express');
@@ -849,4 +849,3 @@ initDatabase()
     console.error('Database initialization failed:', error);
     process.exit(1);
   });
-```
