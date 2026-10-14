@@ -1,134 +1,582 @@
-<!doctype html>
+
+<!DOCTYPE html>
 <html lang="ro">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#090a14">
-  <meta name="description" content="MySiteOfficial — site-uri moderne pentru afaceri care vor să crească. Design premium, experiențe rapide și focus pe rezultate.">
-  <title>MySiteOfficial — Dă formă următorului tău pas</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#08090d">
+  <meta name="description" content="MySiteOfficial — web design modern, website-uri rapide și experiențe digitale construite pentru afacerea ta.">
+  <title>MySiteOfficial — Digital Experiences</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
   <script src="/app.js" defer></script>
 </head>
-<body>
-  <div class="site-noise" aria-hidden="true"></div>
-  <div class="ambient ambient-a" aria-hidden="true"></div>
-  <div class="ambient ambient-b" aria-hidden="true"></div>
 
-  <header class="site-header" id="top">
-    <div class="container nav-wrap">
-      <a href="#top" class="brand" aria-label="MySiteOfficial - pagina principală">
-        <span class="brand-mark"><svg viewBox="0 0 44 44" aria-hidden="true"><path d="M22 3.8 27.5 16.5 40.2 22 27.5 27.5 22 40.2 16.5 27.5 3.8 22 16.5 16.5Z" fill="currentColor"/><circle cx="22" cy="22" r="4.1" fill="#0a0a15"/></svg></span>
-        <span class="brand-text">MySite<span>Official</span><small>DIGITAL STUDIO</small></span>
+<body>
+  <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="true"></div>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="#" aria-label="MySiteOfficial - pagina principală">
+        <span class="brand-mark">M<span>.</span></span>
+        <span class="brand-name">MySite<span>Official</span></span>
       </a>
+
+      <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Deschide meniul" aria-expanded="false" aria-controls="mobileNav">
+        <span></span>
+        <span></span>
+      </button>
+
       <nav class="desktop-nav" aria-label="Navigare principală">
-        <a href="#servicii">Servicii</a>
-        <a href="#proces">Proces</a>
-        <a href="#proiecte">Portofoliu</a>
-        <a href="#preturi">Prețuri</a>
+        <a href="#services">Servicii</a>
+        <a href="#work">Proiecte</a>
+        <a href="#process">Proces</a>
+        <a href="#pricing">Prețuri</a>
+        <a href="#contact">Contact</a>
       </nav>
-      <div class="nav-actions">
-        <button class="button button-ghost nav-login" data-open-auth="login">Intră în cont</button>
-        <a class="button button-primary nav-cta" href="#contact">Cere o ofertă <span aria-hidden="true">↗</span></a>
-        <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Deschide meniul" aria-expanded="false"><span></span><span></span></button>
+
+      <div class="header-actions">
+        <button class="button button-ghost nav-login" data-open-auth="login" type="button">Log in</button>
+        <button class="button button-primary nav-login" data-open-auth="register" type="button">Începe acum <span>↗</span></button>
+
+        <div class="account-pill" id="accountPill" hidden>
+          <div class="account-avatar" id="accountAvatar">M</div>
+          <span class="account-email" id="accountEmail"></span>
+          <button class="logout-button" id="logoutButton" type="button" aria-label="Deconectare" title="Deconectare">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M10 17l5-5-5-5M15 12H3M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"></path>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
-    <div class="mobile-nav" id="mobileNav">
-      <a href="#servicii">Servicii</a><a href="#proces">Proces</a><a href="#proiecte">Portofoliu</a><a href="#preturi">Prețuri</a>
-      <button class="button button-ghost" data-open-auth="login">Intră în cont</button>
-      <a class="button button-primary" href="#contact">Cere o ofertă ↗</a>
-    </div>
+
+    <nav class="mobile-nav" id="mobileNav" aria-label="Navigare mobilă">
+      <a href="#services">Servicii</a>
+      <a href="#work">Proiecte</a>
+      <a href="#process">Proces</a>
+      <a href="#pricing">Prețuri</a>
+      <a href="#contact">Contact</a>
+      <div class="mobile-nav-actions">
+        <button class="button button-ghost" data-open-auth="login" type="button">Log in</button>
+        <button class="button button-primary" data-open-auth="register" type="button">Creează cont <span>↗</span></button>
+      </div>
+    </nav>
   </header>
 
   <main>
-    <section class="hero section-pad">
-      <div class="container hero-grid">
+    <section class="hero section">
+      <div class="hero-grid container">
         <div class="hero-copy reveal">
-          <div class="eyebrow"><span class="status-dot"></span> STUDIO DIGITAL · IDEI CU IMPACT</div>
-          <h1>Ideile tale merită<br>un site <span class="gradient-text">pe măsură.</span></h1>
-          <p class="hero-lead">Construim experiențe digitale care arată impecabil, se mișcă rapid și transformă vizitatorii în clienți.</p>
-          <div class="hero-actions">
-            <a class="button button-primary button-large" href="#contact">Hai să construim <span aria-hidden="true">↗</span></a>
-            <a class="button button-outline button-large" href="#proiecte"><span class="play-icon">▷</span> Explorează proiectele</a>
+          <div class="eyebrow">
+            <span class="eyebrow-dot"></span>
+            DESIGN DIGITAL · DE LA IDEE LA LANSARE
           </div>
-          <div class="hero-proof">
-            <div class="proof-avatars" aria-hidden="true"><span>M</span><span>A</span><span>+</span></div>
-            <div><strong>Fiecare detaliu contează.</strong><small>De la prima schiță până la lansare.</small></div>
-            <div class="proof-divider"></div>
-            <div class="proof-rating"><span>★★★★★</span><small>Design cu intenție</small></div>
+
+          <h1>Construim site-uri care fac <span class="gradient-text">diferența.</span></h1>
+
+          <p class="hero-description">
+            Experiențe digitale moderne, design atent și performanță reală.
+            Transformăm ideile în website-uri care îți reprezintă brandul și îți dezvoltă afacerea.
+          </p>
+
+          <div class="hero-actions">
+            <a class="button button-primary button-large" href="#contact">Hai să discutăm <span>↗</span></a>
+            <a class="button button-ghost button-large" href="#work">Explorează proiectele <span>↓</span></a>
+          </div>
+
+          <div class="hero-trust">
+            <div class="trust-avatars" aria-hidden="true">
+              <span>A</span>
+              <span>M</span>
+              <span>D</span>
+            </div>
+            <p><strong>Creat cu atenție.</strong><br>Fiecare detaliu contează.</p>
           </div>
         </div>
 
-        <div class="hero-visual reveal reveal-delay" aria-label="Previzualizare ilustrativă a unui site web">
-          <div class="visual-orbit orbit-one"></div><div class="visual-orbit orbit-two"></div>
-          <div class="floating-chip chip-top"><span class="chip-icon violet">✳</span><span><b>Design premium</b><small>Fiecare pixel are un scop</small></span></div>
-          <div class="floating-chip chip-bottom"><span class="chip-icon mint">↗</span><span><b>Performanță rapidă</b><small>Creat pentru toate ecranele</small></span><span class="mini-sparkline">▁▃▅▇</span></div>
-          <div class="mock-browser">
-            <div class="browser-top"><div class="browser-dots"><i></i><i></i><i></i></div><div class="browser-address"><span class="lock-icon">♙</span> yourbrand.ro</div><span class="browser-menu">•••</span></div>
+        <div class="hero-visual reveal">
+          <div class="visual-glow"></div>
+          <div class="browser-window">
+            <div class="browser-top">
+              <div class="browser-dots"><i></i><i></i><i></i></div>
+              <div class="browser-address">yourbrand.ro</div>
+              <span class="browser-menu">•••</span>
+            </div>
+
             <div class="mock-site">
-              <div class="mock-nav"><div class="mock-logo"><span></span> north<span class="muted-word">/studio</span></div><div class="mock-links"><i></i><i></i><i></i><b>↗</b></div></div>
-              <div class="mock-hero-text"><span class="mock-kicker"><i></i> DESIGN THAT MOVES YOU</span><div class="mock-heading">Make your<br><em>next move.</em></div><div class="mock-lines"><i></i><i></i></div><div class="mock-button">Discover the studio <b>↗</b></div></div>
-              <div class="mock-art"><div class="art-sun"></div><div class="art-ring ring-a"></div><div class="art-ring ring-b"></div><div class="art-block block-a"></div><div class="art-block block-b"></div><div class="art-caption">FORM / FUNCTION / FEELING</div></div>
-              <div class="mock-footer"><span>INDEPENDENT DIGITAL STUDIO</span><span>SCROLL TO EXPLORE ↓</span></div>
+              <div class="mock-nav">
+                <div class="mock-logo">STUDIO<span>.</span></div>
+                <div class="mock-nav-links"><span>Despre</span><span>Servicii</span><span>Contact</span></div>
+                <div class="mock-nav-button">Let's talk ↗</div>
+              </div>
+
+              <div class="mock-content">
+                <div class="mock-label"><span></span> CREATIVE DIGITAL STUDIO</div>
+                <div class="mock-title">Make your<br><em>next move.</em></div>
+                <p>Design that connects.<br>Digital that performs.</p>
+                <div class="mock-cta">Explorează <span>↗</span></div>
+              </div>
+
+              <div class="mock-bottom">
+                <span>DESIGN WITH PURPOSE</span>
+                <span>01 — 04</span>
+              </div>
             </div>
           </div>
-          <div class="visual-label"><span class="label-line"></span><span>BUILT FOR WHAT'S NEXT</span></div>
+
+          <div class="floating-card floating-card-top">
+            <span class="floating-icon">✳</span>
+            <div><strong>Design modern</strong><small>Fiecare pixel contează</small></div>
+          </div>
+
+          <div class="floating-card floating-card-bottom">
+            <span class="status-indicator"></span>
+            <div><strong>Ready to launch</strong><small>Următorul tău proiect</small></div>
+            <span class="floating-arrow">↗</span>
+          </div>
+
+          <div class="hero-orbit orbit-one"></div>
+          <div class="hero-orbit orbit-two"></div>
         </div>
       </div>
-      <div class="container hero-bottom-row"><span>IDEI ÎN MIȘCARE. BRANDURI ÎN CREȘTERE.</span><div class="scroll-indicator"><span></span> DERULEAZĂ PENTRU A DESCOPERI</div><span class="hero-year">© 2026</span></div>
+
+      <div class="hero-bottom container">
+        <span>STRATEGIE</span><i></i>
+        <span>DESIGN</span><i></i>
+        <span>DEZVOLTARE</span><i></i>
+        <span>PERFORMANȚĂ</span>
+      </div>
     </section>
 
-    <section class="ticker" aria-label="Specializări"><div class="ticker-track"><span>WEB DESIGN</span><b>✳</b><span>DEVELOPMENT</span><b>✳</b><span>BRAND EXPERIENCE</span><b>✳</b><span>UI / UX</span><b>✳</b><span>WEB DESIGN</span><b>✳</b><span>DEVELOPMENT</span><b>✳</b><span>BRAND EXPERIENCE</span><b>✳</b><span>UI / UX</span><b>✳</b></div></section>
-
-    <section class="section section-pad" id="servicii">
+    <section class="section services-section" id="services">
       <div class="container">
-        <div class="section-heading reveal"><div><div class="eyebrow">01 — CE FACEM</div><h2>Tot ce ai nevoie.<br><span class="muted-heading">Fără complicații.</span></h2></div><p>Nu doar un site frumos. O bază digitală solidă, construită în jurul afacerii tale și a oamenilor pe care vrei să-i atragi.</p></div>
+        <div class="section-heading reveal">
+          <div>
+            <div class="eyebrow"><span class="eyebrow-dot"></span> CU CE TE AJUTĂM</div>
+            <h2>Tot ce ai nevoie pentru<br>o <span class="gradient-text">prezență digitală</span> solidă.</h2>
+          </div>
+          <p>De la prima idee până la un website complet, construim soluții adaptate obiectivelor tale.</p>
+        </div>
+
         <div class="services-grid">
-          <article class="service-card service-featured reveal"><div class="card-top"><span class="service-number">01 / WEB</span><span class="service-symbol symbol-purple">↗</span></div><div class="service-icon icon-grid"><span></span><span></span><span></span><span></span></div><h3>Site-uri de prezentare</h3><p>Prima impresie se întâmplă o singură dată. Facem să conteze — cu un design memorabil și un mesaj clar.</p><div class="card-tags"><span>Responsive</span><span>SEO-ready</span><span>Rapid</span></div><a href="#contact" class="text-link">Hai să discutăm <span>↗</span></a></article>
-          <article class="service-card reveal reveal-delay"><div class="card-top"><span class="service-number">02 / SHOP</span><span class="service-symbol symbol-blue">◇</span></div><div class="service-icon icon-bag"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10 17h28l-2 24H12l-2-24Z"/><path d="M17 19V13a7 7 0 0 1 14 0v6"/></svg></div><h3>Magazine online</h3><p>Transformă produsele în experiențe de cumpărare simple, sigure și plăcute, de la primul click până la comandă.</p><div class="card-tags"><span>Produse</span><span>Checkout</span><span>Plăți</span></div><a href="#contact" class="text-link">Descoperă opțiunile <span>↗</span></a></article>
-          <article class="service-card reveal"><div class="card-top"><span class="service-number">03 / CARE</span><span class="service-symbol symbol-mint">✳</span></div><div class="service-icon icon-care"><span>↻</span></div><h3>Mentenanță & suport</h3><p>Ținem site-ul actualizat, sigur și în formă bună, ca tu să te poți concentra pe ceea ce faci cel mai bine.</p><div class="card-tags"><span>Actualizări</span><span>Backup</span><span>Suport</span></div><a href="#contact" class="text-link">Află mai multe <span>↗</span></a></article>
+          <article class="service-card reveal">
+            <div class="service-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M3 9h18M8 6.5h.01M6 6.5h.01"></path></svg>
+            </div>
+            <span class="service-number">01</span>
+            <h3>Web Design</h3>
+            <p>Interfețe curate, moderne și intuitive, gândite pentru a transforma vizitatorii în clienți.</p>
+            <a href="#contact" class="text-link">Discută proiectul <span>↗</span></a>
+          </article>
+
+          <article class="service-card reveal">
+            <div class="service-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 8-4 4 4 4M16 8l4 4-4 4M14 4l-4 16"></path></svg>
+            </div>
+            <span class="service-number">02</span>
+            <h3>Dezvoltare Web</h3>
+            <p>Website-uri responsive, rapide și funcționale, construite pentru toate dimensiunile de ecran.</p>
+            <a href="#contact" class="text-link">Discută proiectul <span>↗</span></a>
+          </article>
+
+          <article class="service-card reveal">
+            <div class="service-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4"></path><circle cx="12" cy="12" r="8"></circle></svg>
+            </div>
+            <span class="service-number">03</span>
+            <h3>Identitate Digitală</h3>
+            <p>O imagine online coerentă, care reflectă personalitatea brandului și te diferențiază.</p>
+            <a href="#contact" class="text-link">Discută proiectul <span>↗</span></a>
+          </article>
+
+          <article class="service-card reveal">
+            <div class="service-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h17M8 15l4-5 3 2 5-7"></path><path d="M16 5h4v4"></path></svg>
+            </div>
+            <span class="service-number">04</span>
+            <h3>Optimizare</h3>
+            <p>Structură clară, încărcare rapidă și o experiență optimizată pentru utilizatori și motoare de căutare.</p>
+            <a href="#contact" class="text-link">Discută proiectul <span>↗</span></a>
+          </article>
         </div>
       </div>
     </section>
 
-    <section class="manifesto section-pad" id="proces"><div class="container manifesto-grid"><div class="manifesto-mark reveal"><div class="big-asterisk">✳</div><span>MAI PUȚIN ZGOMOT.<br>MAI MULTĂ CLARITATE.</span><div class="mark-lines"><i></i><i></i><i></i><i></i><i></i></div></div><div class="manifesto-copy reveal reveal-delay"><div class="eyebrow">02 — CUM LUCRĂM</div><h2>De la „am o idee”<br>la <span class="gradient-text">„uite ce am construit”.</span></h2><p>Un proces simplu, transparent și colaborativ. Știi mereu ce urmează, ce primești și de ce contează.</p><div class="process-list"><div class="process-step"><span>01</span><div><h3>Ne cunoaștem</h3><p>Înțelegem afacerea, publicul și obiectivele tale.</p></div><span class="step-symbol">↗</span></div><div class="process-step"><span>02</span><div><h3>Proiectăm & construim</h3><p>Transformăm direcția stabilită într-un site real, testat pe mobil și desktop.</p></div><span class="step-symbol">◇</span></div><div class="process-step"><span>03</span><div><h3>Lansăm împreună</h3><p>Verificăm ultimele detalii și îți predăm un site pregătit să lucreze pentru tine.</p></div><span class="step-symbol">✳</span></div></div></div></div></section>
+    <section class="section work-section" id="work">
+      <div class="container">
+        <div class="section-heading reveal">
+          <div>
+            <div class="eyebrow"><span class="eyebrow-dot"></span> SELECTED WORK</div>
+            <h2>Idei transformate în<br><span class="gradient-text">experiențe digitale.</span></h2>
+          </div>
+          <p>Fiecare proiect pornește de la un obiectiv clar și se construiește în jurul experienței utilizatorului.</p>
+        </div>
 
-    <section class="section section-pad portfolio-section" id="proiecte"><div class="container"><div class="section-heading reveal"><div><div class="eyebrow">03 — IDEI ÎN FORMĂ</div><h2>Design care spune<br><span class="muted-heading">ce ai de spus.</span></h2></div><p>Fiecare brand are propria poveste. Mai jos sunt concepte demonstrative care arată cum o idee poate deveni o experiență digitală.</p></div><div class="portfolio-grid">
-      <article class="project-card project-large reveal"><div class="project-art art-north"><div class="north-top"><span>NORTH / STUDIO</span><span>EST. 2026</span></div><div class="north-center"><small>DESIGN / CULTURE / FORM</small><div>Beyond<br><i>the ordinary.</i></div><span>EXPLORE THE STUDIO ↗</span></div><div class="north-bottom"><span>INDEPENDENT BY NATURE</span><span>01—03</span></div></div><div class="project-caption"><div><h3>North Studio</h3><p>Concept de brand creativ · Site de prezentare</p></div><span class="project-arrow">↗</span></div></article>
-      <article class="project-card reveal reveal-delay"><div class="project-art art-mono"><div class="mono-top"><span>MONO OBJECTS</span><span>COLLECTION Nº 04</span></div><div class="mono-product"><div class="product-shadow"></div><div class="product-vase"></div><div class="product-stem"></div><div class="product-leaf leaf-one"></div><div class="product-leaf leaf-two"></div></div><div class="mono-bottom"><div>Objects for<br><i>everyday rituals.</i></div><span>SHOP COLLECTION ↗</span></div></div><div class="project-caption"><div><h3>Mono Objects</h3><p>Concept de magazin online</p></div><span class="project-arrow">↗</span></div></article>
-      <article class="project-card reveal"><div class="project-art art-terra"><div class="terra-top"><span>TERRA HOUSE</span><span>ARCHITECTURE / LIVING</span></div><div class="terra-image"><div class="terra-sun"></div><div class="terra-house"><div class="house-roof"></div><div class="house-body"><i></i><i></i><i></i></div></div><div class="terra-ground"></div></div><div class="terra-bottom"><span>Spaces to slow down.</span><b>DISCOVER ↗</b></div></div><div class="project-caption"><div><h3>Terra House</h3><p>Concept pentru design interior</p></div><span class="project-arrow">↗</span></div></article>
-    </div><p class="portfolio-note"><span>✳</span> Proiectele din această secțiune sunt concepte vizuale demonstrative, nu lucrări comandate de clienți reali.</p></div></section>
+        <div class="work-grid">
+          <article class="work-card work-card-large reveal">
+            <div class="work-preview work-preview-one">
+              <div class="preview-top">
+                <span class="preview-brand">NOVA<span>.</span></span>
+                <span>COLLECTION 2026</span>
+              </div>
+              <div class="preview-fashion">
+                <div class="fashion-shape fashion-shape-one"></div>
+                <div class="fashion-shape fashion-shape-two"></div>
+                <div class="fashion-copy">
+                  <span>LESS, BUT BETTER.</span>
+                  <strong>Everyday<br>Essentials.</strong>
+                  <i>DISCOVER THE COLLECTION ↗</i>
+                </div>
+              </div>
+              <div class="preview-footer"><span>NEW SEASON</span><span>DESIGNED FOR YOU</span></div>
+            </div>
+            <div class="work-info">
+              <div><h3>Nova — E-commerce</h3><p>Design de brand · Magazin online</p></div>
+              <span class="work-arrow">↗</span>
+            </div>
+          </article>
 
-    <section class="pricing section-pad" id="preturi"><div class="container"><div class="section-heading reveal"><div><div class="eyebrow">04 — INVESTIȚIA TA</div><h2>Clar de la început.<br><span class="muted-heading">Flexibil pentru tine.</span></h2></div><p>Fără pachete opace și surprize la final. Pornim de la nevoile reale ale afacerii tale și stabilim împreună ce are sens.</p></div><div class="pricing-grid">
-      <article class="price-card reveal"><div class="price-kicker">PENTRU UN START BUN</div><h3>Launch</h3><p class="price-desc">Prezență online clară, fără lucruri inutile.</p><div class="price-value"><small>de la</small><strong>900 <sup>lei</sup></strong></div><div class="price-rule"></div><ul><li><span>✓</span> Landing page / o pagină</li><li><span>✓</span> Design adaptat pentru mobil</li><li><span>✓</span> Secțiuni esențiale & contact</li><li><span>✓</span> Formular sau buton WhatsApp</li></ul><a href="#contact" class="button button-outline price-button">Alege Launch <span>↗</span></a></article>
-      <article class="price-card price-featured reveal reveal-delay"><div class="popular-pill"><span>✳</span> CEL MAI ALES</div><div class="price-kicker">PENTRU AFACERI ÎN CREȘTERE</div><h3>Business</h3><p class="price-desc">Un site complet care inspiră încredere.</p><div class="price-value"><small>de la</small><strong>1.800 <sup>lei</sup></strong></div><div class="price-rule"></div><ul><li><span>✓</span> 4–6 pagini personalizate</li><li><span>✓</span> Design premium, responsive</li><li><span>✓</span> Bază SEO & performanță</li><li><span>✓</span> Formular de solicitare</li><li><span>✓</span> Asistență la lansare</li></ul><a href="#contact" class="button button-primary price-button">Alege Business <span>↗</span></a></article>
-      <article class="price-card reveal"><div class="price-kicker">PENTRU IDEI SPECIALE</div><h3>Custom</h3><p class="price-desc">Funcționalități și experiențe pe comandă.</p><div class="price-value"><small>preț</small><strong>Personalizat</strong></div><div class="price-rule"></div><ul><li><span>✓</span> Magazine online</li><li><span>✓</span> Programări & integrări</li><li><span>✓</span> Funcționalități dedicate</li><li><span>✓</span> Plan de suport opțional</li></ul><a href="#contact" class="button button-outline price-button">Discută proiectul <span>↗</span></a></article>
-    </div><p class="price-disclaimer">Prețurile sunt orientative, pentru proiecte noi. Domeniul, găzduirea, licențele și funcționalitățile suplimentare se stabilesc separat, înainte de începerea lucrului.</p></div></section>
+          <article class="work-card reveal">
+            <div class="work-preview work-preview-two">
+              <div class="preview-agency-nav"><strong>MONO<span>®</span></strong><span>MENU ☰</span></div>
+              <div class="agency-content">
+                <span>INDEPENDENT CREATIVE STUDIO</span>
+                <h3>Ideas made<br><em>visible.</em></h3>
+                <div class="agency-circle">M.</div>
+              </div>
+              <div class="agency-footer"><span>BRANDING / DIGITAL / STRATEGY</span><span>SCROLL ↓</span></div>
+            </div>
+            <div class="work-info">
+              <div><h3>Mono — Studio</h3><p>Website de prezentare · Branding</p></div>
+              <span class="work-arrow">↗</span>
+            </div>
+          </article>
 
-    <section class="contact-section section-pad" id="contact"><div class="container contact-grid"><div class="contact-copy reveal"><div class="eyebrow">05 — URMĂTORUL PAS</div><h2>Ai o idee?<br><span class="gradient-text">Hai s-o punem online.</span></h2><p>Spune-ne câteva lucruri despre proiectul tău. Revenim cu întrebările potrivite și o direcție clară pentru următorul pas.</p><div class="contact-note"><span class="contact-note-icon">✳</span><div><strong>Fără presiune. Fără obligații.</strong><small>Doar o conversație despre ce ar funcționa pentru tine.</small></div></div><div class="contact-availability"><span class="status-dot"></span> DESCHIS PENTRU PROIECTE NOI</div></div><form class="contact-form reveal reveal-delay" id="contactForm"><div class="form-heading"><span>SPUNE-NE DESPRE PROIECT</span><span class="form-step">01 — 01</span></div><div class="form-row"><label>Numele tău<input name="name" type="text" autocomplete="name" placeholder="Cum te numești?" minlength="2" maxlength="100" required></label><label>Email de contact<input name="email" type="email" autocomplete="email" placeholder="nume@exemplu.ro" maxlength="254" required></label></div><div class="form-row"><label>Ce ai nevoie?<select name="service" required><option value="" disabled selected>Alege serviciul</option><option>Site de prezentare</option><option>Magazin online</option><option>Landing page</option><option>Mentenanță & suport</option><option>Altceva / nu sunt sigur</option></select></label><label>Buget estimativ<select name="budget" required><option value="" disabled selected>Alege un interval</option><option>Sub 1.000 lei</option><option>1.000–2.000 lei</option><option>2.000–4.000 lei</option><option>4.000+ lei</option><option>Vreau să discutăm</option></select></label></div><label>Pe scurt, ce ai în minte?<textarea name="message" rows="4" minlength="10" maxlength="2500" placeholder="Povestește-ne despre afacerea ta, ideea sau obiectivul site-ului..." required></textarea></label><button class="button button-primary button-large submit-button" type="submit">Trimite solicitarea <span>↗</span></button><p class="form-status" id="contactStatus" role="status" aria-live="polite"></p><small class="privacy-note">Prin trimitere, ești de acord să folosim datele furnizate pentru a răspunde solicitării tale.</small></form></div></section>
+          <article class="work-card reveal">
+            <div class="work-preview work-preview-three">
+              <div class="dashboard-top"><span>pulse<span>.</span></span><span>OVERVIEW ⌄</span></div>
+              <div class="dashboard-welcome">Good morning, Alex.</div>
+              <div class="dashboard-metrics">
+                <div><small>Total revenue</small><strong>€24,680</strong><i>↗ 12.8%</i></div>
+                <div><small>Active users</small><strong>8,492</strong><i>↗ 8.2%</i></div>
+              </div>
+              <div class="dashboard-chart">
+                <div class="chart-bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+              </div>
+              <div class="dashboard-bottom"><span>PERFORMANCE</span><span>LAST 30 DAYS</span></div>
+            </div>
+            <div class="work-info">
+              <div><h3>Pulse — Dashboard</h3><p>UI/UX Design · Interfață digitală</p></div>
+              <span class="work-arrow">↗</span>
+            </div>
+          </article>
+        </div>
 
-    <section class="final-cta"><div class="container final-cta-inner"><div class="final-orb" aria-hidden="true">✳</div><div><div class="eyebrow">IDEA TA MERITĂ LOCUL EI ONLINE</div><h2>Următorul site de care<br>te îndrăgostești poate fi al tău.</h2></div><a href="#contact" class="button button-light button-large">Să începem <span>↗</span></a></div></section>
+        <p class="work-disclaimer">Concepte demonstrative pentru prezentarea stilului și a direcției creative.</p>
+      </div>
+    </section>
+
+    <section class="section process-section" id="process">
+      <div class="container">
+        <div class="section-heading reveal">
+          <div>
+            <div class="eyebrow"><span class="eyebrow-dot"></span> CUM LUCRĂM</div>
+            <h2>Un proces simplu.<br><span class="gradient-text">Rezultate bine gândite.</span></h2>
+          </div>
+          <p>Colaborare transparentă, pași clari și atenție la fiecare etapă a proiectului tău.</p>
+        </div>
+
+        <div class="process-list">
+          <article class="process-item reveal">
+            <span class="process-number">01</span>
+            <div class="process-main"><h3>Descoperim</h3><p>Discutăm ideea, obiectivele, publicul țintă și ceea ce face afacerea ta unică.</p></div>
+            <span class="process-symbol">↗</span>
+          </article>
+          <article class="process-item reveal">
+            <span class="process-number">02</span>
+            <div class="process-main"><h3>Planificăm și proiectăm</h3><p>Definim structura, direcția vizuală și experiența pe care o va avea utilizatorul.</p></div>
+            <span class="process-symbol">✳</span>
+          </article>
+          <article class="process-item reveal">
+            <span class="process-number">03</span>
+            <div class="process-main"><h3>Construim</h3><p>Dezvoltăm website-ul și verificăm funcționalitatea pe dispozitive și dimensiuni diferite.</p></div>
+            <span class="process-symbol">⌘</span>
+          </article>
+          <article class="process-item reveal">
+            <span class="process-number">04</span>
+            <div class="process-main"><h3>Lansăm</h3><p>Facem verificările finale și pregătim proiectul pentru publicare.</p></div>
+            <span class="process-symbol">↑</span>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section pricing-section" id="pricing">
+      <div class="container">
+        <div class="section-heading reveal">
+          <div>
+            <div class="eyebrow"><span class="eyebrow-dot"></span> INVESTIȚIA TA</div>
+            <h2>Prețuri clare.<br><span class="gradient-text">Soluții potrivite.</span></h2>
+          </div>
+          <p>Fiecare proiect este diferit. Alege punctul de plecare, iar noi stabilim împreună detaliile.</p>
+        </div>
+
+        <div class="pricing-grid">
+          <article class="pricing-card reveal">
+            <div class="pricing-label">START</div>
+            <h3>Landing Page</h3>
+            <p class="pricing-description">Pentru idei, campanii și afaceri la început de drum.</p>
+            <div class="pricing-price"><span>de la</span><strong>€150</strong></div>
+            <div class="pricing-divider"></div>
+            <ul class="pricing-features">
+              <li><span>✓</span> Design modern, responsive</li>
+              <li><span>✓</span> O pagină personalizată</li>
+              <li><span>✓</span> Formular de contact</li>
+              <li><span>✓</span> Optimizare de bază</li>
+            </ul>
+            <a href="#contact" class="button button-outline button-full">Alege pachetul <span>↗</span></a>
+          </article>
+
+          <article class="pricing-card pricing-card-featured reveal">
+            <div class="pricing-badge">CEL MAI ALES</div>
+            <div class="pricing-label">BUSINESS</div>
+            <h3>Website complet</h3>
+            <p class="pricing-description">Pentru branduri care vor o prezență online profesionistă.</p>
+            <div class="pricing-price"><span>de la</span><strong>€300</strong></div>
+            <div class="pricing-divider"></div>
+            <ul class="pricing-features">
+              <li><span>✓</span> Până la 5 pagini</li>
+              <li><span>✓</span> Design personalizat</li>
+              <li><span>✓</span> Formular de contact</li>
+              <li><span>✓</span> SEO tehnic de bază</li>
+              <li><span>✓</span> Optimizare pentru mobil</li>
+            </ul>
+            <a href="#contact" class="button button-primary button-full">Alege pachetul <span>↗</span></a>
+          </article>
+
+          <article class="pricing-card reveal">
+            <div class="pricing-label">CUSTOM</div>
+            <h3>Proiect personalizat</h3>
+            <p class="pricing-description">Pentru funcționalități speciale și proiecte complexe.</p>
+            <div class="pricing-price"><strong>La cerere</strong></div>
+            <div class="pricing-divider"></div>
+            <ul class="pricing-features">
+              <li><span>✓</span> Soluție adaptată proiectului</li>
+              <li><span>✓</span> Funcționalități personalizate</li>
+              <li><span>✓</span> Arhitectură flexibilă</li>
+              <li><span>✓</span> Consultanță dedicată</li>
+            </ul>
+            <a href="#contact" class="button button-outline button-full">Cere o ofertă <span>↗</span></a>
+          </article>
+        </div>
+
+        <p class="pricing-note">Prețurile sunt orientative. Domeniul, găzduirea și serviciile externe pot presupune costuri suplimentare.</p>
+      </div>
+    </section>
+
+    <section class="section cta-section">
+      <div class="container">
+        <div class="cta-panel reveal">
+          <div class="cta-decoration cta-decoration-one"></div>
+          <div class="cta-decoration cta-decoration-two"></div>
+          <div class="cta-content">
+            <div class="eyebrow"><span class="eyebrow-dot"></span> URMĂTORUL PAS ÎNCEPE AICI</div>
+            <h2>Ai o idee?<br><span class="gradient-text">Hai s-o construim.</span></h2>
+            <p>Spune-ne ce ai în minte. Vom găsi împreună direcția potrivită pentru proiectul tău.</p>
+            <a href="#contact" class="button button-primary button-large">Începem o conversație <span>↗</span></a>
+          </div>
+          <div class="cta-mark" aria-hidden="true">M<span>.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section contact-section" id="contact">
+      <div class="container contact-grid">
+        <div class="contact-copy reveal">
+          <div class="eyebrow"><span class="eyebrow-dot"></span> CONTACT</div>
+          <h2>Hai să vorbim despre<br><span class="gradient-text">proiectul tău.</span></h2>
+          <p>Completează formularul și trimite-ne câteva detalii. Vom reveni cu un răspuns cât mai curând posibil.</p>
+
+          <div class="contact-detail">
+            <div class="contact-detail-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m3 7 9 6 9-6"></path></svg>
+            </div>
+            <div><small>EMAIL</small><a href="mailto:alexandruu376@gmail.com">alexandruu376@gmail.com</a></div>
+          </div>
+
+          <div class="contact-detail">
+            <div class="contact-detail-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+            </div>
+            <div><small>DISPONIBILITATE</small><span>Deschis pentru proiecte noi</span></div>
+          </div>
+        </div>
+
+        <div class="contact-form-card reveal">
+          <form id="contactForm" class="contact-form">
+            <div class="form-row">
+              <label for="contactName">Numele tău
+                <input id="contactName" name="name" type="text" placeholder="Cum te numești?" maxlength="100" autocomplete="name" required>
+              </label>
+              <label for="contactEmail">Email
+                <input id="contactEmail" name="email" type="email" placeholder="nume@exemplu.ro" maxlength="254" autocomplete="email" required>
+              </label>
+            </div>
+
+            <label for="contactService">Ce tip de proiect ai?
+              <select id="contactService" name="service" required>
+                <option value="" disabled selected>Alege un serviciu</option>
+                <option value="Landing Page">Landing Page</option>
+                <option value="Website Business">Website Business</option>
+                <option value="Magazin online">Magazin online</option>
+                <option value="UI/UX Design">UI/UX Design</option>
+                <option value="Alt proiect">Alt proiect</option>
+              </select>
+            </label>
+
+            <label for="contactMessage">Spune-ne câteva detalii
+              <textarea id="contactMessage" name="message" rows="5" maxlength="5000" placeholder="Care este ideea ta și ce ai vrea să obții?" required></textarea>
+            </label>
+
+            <p class="form-status" id="contactStatus" role="status" aria-live="polite"></p>
+
+            <button class="button button-primary button-large button-full" type="submit">Trimite mesajul <span>↗</span></button>
+            <p class="form-privacy">Folosim datele furnizate doar pentru a răspunde solicitării tale.</p>
+          </form>
+        </div>
+      </div>
+    </section>
   </main>
 
-  <footer class="site-footer"><div class="container footer-main"><a href="#top" class="brand footer-brand"><span class="brand-mark"><svg viewBox="0 0 44 44" aria-hidden="true"><path d="M22 3.8 27.5 16.5 40.2 22 27.5 27.5 22 40.2 16.5 27.5 3.8 22 16.5 16.5Z" fill="currentColor"/><circle cx="22" cy="22" r="4.1" fill="#0a0a15"/></svg></span><span class="brand-text">MySite<span>Official</span><small>DIGITAL STUDIO</small></span></a><p>Transformăm ideile în experiențe digitale<br>cu sens, stil și scop.</p><div class="footer-links"><a href="#servicii">Servicii</a><a href="#proiecte">Portofoliu</a><a href="#preturi">Prețuri</a><a href="#contact">Contact</a><button data-open-auth="register">Creează cont</button></div></div><div class="container footer-bottom"><span>© <span id="currentYear">2026</span> MySiteOfficial. Toate drepturile rezervate.</span><span class="developer-credit">Developeri: <strong>6phf9 / Alex-Gruia</strong></span><a href="#top" class="back-to-top">Înapoi sus ↑</a></div></footer>
+  <footer class="site-footer">
+    <div class="container footer-top">
+      <a class="brand" href="#" aria-label="MySiteOfficial - pagina principală">
+        <span class="brand-mark">M<span>.</span></span>
+        <span class="brand-name">MySite<span>Official</span></span>
+      </a>
 
-  <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="true"></div>
+      <p>Construim experiențe digitale cu sens.</p>
+
+      <div class="footer-links">
+        <a href="#services">Servicii</a>
+        <a href="#work">Proiecte</a>
+        <a href="#contact">Contact</a>
+      </div>
+    </div>
+
+    <div class="container footer-bottom">
+      <span>© <span id="currentYear">2026</span> MySiteOfficial. Toate drepturile rezervate.</span>
+      <a href="mailto:alexandruu376@gmail.com">Hai să construim ceva ↗</a>
+    </div>
+  </footer>
 
   <div class="auth-backdrop" id="authBackdrop" hidden>
     <section class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
-      <button class="modal-close" id="closeAuth" aria-label="Închide fereastra">×</button>
-      <div class="auth-brand"><span class="brand-mark"><svg viewBox="0 0 44 44" aria-hidden="true"><path d="M22 3.8 27.5 16.5 40.2 22 27.5 27.5 22 40.2 16.5 27.5 3.8 22 16.5 16.5Z" fill="currentColor"/><circle cx="22" cy="22" r="4.1" fill="#0a0a15"/></svg></span></div>
-      <div class="auth-heading"><div class="eyebrow">BINE AI VENIT ÎN STUDIO</div><h2 id="authTitle">Mă bucur să te revăd.</h2><p id="authSubtitle">Intră în cont pentru a continua.</p></div>
-      <div class="auth-tabs" role="tablist" aria-label="Autentificare"><button type="button" class="auth-tab is-active" data-auth-tab="login" role="tab" aria-selected="true">Intră în cont</button><button type="button" class="auth-tab" data-auth-tab="register" role="tab" aria-selected="false">Creează cont</button></div>
-      <form class="auth-form" id="loginForm"><label>Adresa de email<input type="email" name="email" placeholder="tu@exemplu.ro" autocomplete="email" maxlength="254" required></label><label>Parolă<input type="password" name="password" placeholder="Parola ta" autocomplete="current-password" required></label><div class="captcha-box"><div class="captcha-copy"><span class="captcha-icon">◈</span><span><b>Verificare anti-robot</b><small>Rezolvă calculul pentru a continua.</small></span></div><div class="captcha-question" data-captcha-question>Se încarcă…</div><label class="captcha-answer-label">Răspuns<input type="number" inputmode="numeric" name="captchaAnswer" placeholder="?" required></label><button type="button" class="captcha-refresh" data-refresh-captcha aria-label="Generează alt calcul">↻</button></div><button class="button button-primary button-large auth-submit" type="submit">Intră în cont <span>↗</span></button><p class="auth-status" role="status" aria-live="polite"></p></form>
-      <form class="auth-form" id="registerForm" hidden><label>Numele tău<input type="text" name="name" placeholder="Prenume și nume" autocomplete="name" minlength="2" maxlength="80" required></label><label>Adresa de email<input type="email" name="email" placeholder="tu@exemplu.ro" autocomplete="email" maxlength="254" required></label><label>Parolă<input type="password" name="password" placeholder="Minim 8 caractere" autocomplete="new-password" minlength="8" maxlength="72" required><small class="field-hint">Folosește cel puțin o literă mare, una mică și o cifră.</small></label><div class="captcha-box"><div class="captcha-copy"><span class="captcha-icon">◈</span><span><b>Verificare anti-robot</b><small>Rezolvă calculul pentru a continua.</small></span></div><div class="captcha-question" data-captcha-question>Se încarcă…</div><label class="captcha-answer-label">Răspuns<input type="number" inputmode="numeric" name="captchaAnswer" placeholder="?" required></label><button type="button" class="captcha-refresh" data-refresh-captcha aria-label="Generează alt calcul">↻</button></div><button class="button button-primary button-large auth-submit" type="submit">Creează contul <span>↗</span></button><p class="auth-status" role="status" aria-live="polite"></p><p class="auth-legal">Îți vom trimite un email pentru confirmarea adresei. Linkul expiră în 24 de ore.</p></form>
-      <div class="auth-success" id="authSuccess" hidden><div class="success-icon">✓</div><h3>Verifică-ți inboxul.</h3><p id="authSuccessText">Ți-am trimis un link de confirmare.</p><button type="button" class="button button-outline button-large" id="closeSuccess">Am înțeles</button></div>
-      <div class="auth-bottom"><span>SECURE ACCESS</span><span>✳</span><span>MYSITEOFFICIAL © 2026</span></div>
+      <button class="auth-close" id="closeAuth" type="button" aria-label="Închide fereastra">×</button>
+
+      <div class="auth-brand">
+        <span class="brand-mark">M<span>.</span></span>
+        <span class="brand-name">MySite<span>Official</span></span>
+      </div>
+
+      <div class="auth-heading">
+        <div class="eyebrow"><span class="eyebrow-dot"></span> CONTUL TĂU</div>
+        <h2 id="authTitle">Mă bucur să te revăd.</h2>
+        <p id="authSubtitle">Intră în cont pentru a continua.</p>
+      </div>
+
+      <div class="auth-tabs" role="tablist" aria-label="Autentificare">
+        <button class="auth-tab is-active" data-auth-tab="login" type="button" role="tab" aria-selected="true">Log in</button>
+        <button class="auth-tab" data-auth-tab="register" type="button" role="tab" aria-selected="false">Creează cont</button>
+      </div>
+
+      <form class="auth-form" id="loginForm">
+        <label for="loginEmail">Email
+          <input id="loginEmail" name="email" type="email" placeholder="nume@exemplu.ro" autocomplete="email" maxlength="254" required>
+        </label>
+
+        <label for="loginPassword">Parolă
+          <input id="loginPassword" name="password" type="password" placeholder="Introdu parola" autocomplete="current-password" required>
+        </label>
+
+        <div class="captcha-row">
+          <label for="loginCaptcha">Verificare: <span data-captcha-question>Se încarcă…</span>
+            <input id="loginCaptcha" name="captchaAnswer" type="number" inputmode="numeric" placeholder="Răspuns" required>
+          </label>
+          <button class="captcha-refresh" type="button" data-refresh-captcha aria-label="Reîncarcă verificarea">↻</button>
+        </div>
+
+        <p class="auth-status" role="status" aria-live="polite"></p>
+
+        <button class="button button-primary button-large auth-submit" type="submit">Intră în cont <span>↗</span></button>
+      </form>
+
+      <form class="auth-form" id="registerForm" hidden>
+        <label for="registerUsername">Username
+          <input
+            id="registerUsername"
+            name="username"
+            type="text"
+            placeholder="exemplu_user"
+            minlength="3"
+            maxlength="24"
+            pattern="[A-Za-z0-9_]{3,24}"
+            title="Folosește între 3 și 24 de litere, cifre sau underscore."
+            autocomplete="username"
+            required
+          >
+        </label>
+
+        <label for="registerName">Numele tău
+          <input id="registerName" name="name" type="text" placeholder="Numele complet" minlength="2" maxlength="80" autocomplete="name" required>
+        </label>
+
+        <label for="registerEmail">Email
+          <input id="registerEmail" name="email" type="email" placeholder="nume@exemplu.ro" autocomplete="email" maxlength="254" required>
+        </label>
+
+        <label for="registerPassword">Parolă
+          <input
+            id="registerPassword"
+            name="password"
+            type="password"
+            placeholder="Minimum 8 caractere"
+            minlength="8"
+            maxlength="72"
+            autocomplete="new-password"
+            required
+          >
+          <small class="field-hint">Folosește litere mici, litere mari și cel puțin o cifră.</small>
+        </label>
+
+        <div class="captcha-row">
+          <label for="registerCaptcha">Verificare: <span data-captcha-question>Se încarcă…</span>
+            <input id="registerCaptcha" name="captchaAnswer" type="number" inputmode="numeric" placeholder="Răspuns" required>
+          </label>
+          <button class="captcha-refresh" type="button" data-refresh-captcha aria-label="Reîncarcă verificarea">↻</button>
+        </div>
+
+        <p class="auth-status" role="status" aria-live="polite"></p>
+
+        <button class="button button-primary button-large auth-submit" type="submit">Creează contul <span>↗</span></button>
+
+        <p class="auth-legal">După înregistrare, vei primi un cod de verificare pe email. Codul este valabil 10 minute.</p>
+      </form>
+
+      <div class="auth-success" id="authSuccess" hidden>
+        <div class="success-icon">✉</div>
+        <h3>Verifică-ți inboxul.</h3>
+        <p id="authSuccessText">Ți-am trimis un cod de verificare.</p>
+        <button class="button button-primary button-large button-full" id="closeSuccess" type="button">Am înțeles</button>
+      </div>
+
+      <div class="auth-bottom">
+        <span>Experiențe digitale, construite cu grijă.</span>
+      </div>
     </section>
   </div>
-
-  <div class="account-pill" id="accountPill" hidden><span class="account-avatar" id="accountAvatar">M</span><span class="account-email" id="accountEmail"></span><button type="button" id="logoutButton">Deconectare</button></div>
 </body>
 </html>
