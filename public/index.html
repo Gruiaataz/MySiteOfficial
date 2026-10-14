@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ro">
 <head>
@@ -524,10 +523,13 @@
             minlength="3"
             maxlength="24"
             pattern="[A-Za-z0-9_]{3,24}"
-            title="Folosește între 3 și 24 de litere, cifre sau underscore."
+            title="Folosește între 3 și 24 de litere, cifre sau underscore (_)."
             autocomplete="username"
+            autocapitalize="none"
+            spellcheck="false"
             required
           >
+          <small class="field-hint">3–24 de caractere: litere, cifre sau underscore (_). Fără spații sau @.</small>
         </label>
 
         <label for="registerName">Numele tău
@@ -566,11 +568,37 @@
         <p class="auth-legal">După înregistrare, vei primi un cod de verificare pe email. Codul este valabil 10 minute.</p>
       </form>
 
+      <form class="auth-form" id="verifyCodeForm" hidden>
+        <label for="verifyEmail">Emailul contului
+          <input id="verifyEmail" name="email" type="email" autocomplete="email" maxlength="254" required readonly>
+        </label>
+
+        <label for="verificationCode">Cod de verificare
+          <input
+            id="verificationCode"
+            name="code"
+            type="text"
+            inputmode="numeric"
+            pattern="[0-9]{6}"
+            minlength="6"
+            maxlength="6"
+            placeholder="123456"
+            autocomplete="one-time-code"
+            required
+          >
+        </label>
+
+        <p class="auth-status" role="status" aria-live="polite"></p>
+
+        <button class="button button-primary button-large auth-submit" type="submit">Confirmă emailul <span>↗</span></button>
+        <button class="button button-ghost button-full" id="backToRegister" type="button">Înapoi la înregistrare</button>
+      </form>
+
       <div class="auth-success" id="authSuccess" hidden>
-        <div class="success-icon">✉</div>
-        <h3>Verifică-ți inboxul.</h3>
-        <p id="authSuccessText">Ți-am trimis un cod de verificare.</p>
-        <button class="button button-primary button-large button-full" id="closeSuccess" type="button">Am înțeles</button>
+        <div class="success-icon">✓</div>
+        <h3 id="authSuccessTitle">Cont activat!</h3>
+        <p id="authSuccessText">Te-ai conectat cu succes.</p>
+        <button class="button button-primary button-large button-full" id="closeSuccess" type="button">Continuă</button>
       </div>
 
       <div class="auth-bottom">
