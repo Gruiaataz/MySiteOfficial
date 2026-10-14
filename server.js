@@ -1,4 +1,3 @@
-
 require('dotenv').config();
 
 const express = require('express');
@@ -107,7 +106,7 @@ function cleanEmail(value) {
 }
 
 function cleanUsername(value) {
-  return String(value || '').trim().toLowerCase();
+  return String(value || '').trim().replace(/^@+/, '').toLowerCase();
 }
 
 function validEmail(email) {
@@ -127,10 +126,7 @@ function safeEqual(a, b) {
 }
 
 function emailIsConfigured() {
-  return Boolean(
-    process.env.RESEND_API_KEY &&
-    process.env.RESEND_FROM
-  );
+  return Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM);
 }
 
 function asyncRoute(handler) {
@@ -187,12 +183,8 @@ async function sendVerificationEmail(email, name, code) {
                 MySite<span style="color:#a78bfa">Official</span>
               </div>
               <div style="padding:30px;border:1px solid #282832;border-radius:18px;background:#111117">
-                <p style="color:#b8b8c5;font-size:13px;letter-spacing:2px;text-transform:uppercase">
-                  Verificare email
-                </p>
-                <h1 style="font-size:27px;line-height:1.3;margin:12px 0">
-                  Salut, ${escapeHtml(name)}!
-                </h1>
+                <p style="color:#b8b8c5;font-size:13px;letter-spacing:2px;text-transform:uppercase">Verificare email</p>
+                <h1 style="font-size:27px;line-height:1.3;margin:12px 0">Salut, ${escapeHtml(name)}!</h1>
                 <p style="color:#c4c4d0;line-height:1.7">
                   Folosește codul de mai jos pentru a-ți confirma adresa de email și a-ți activa contul.
                 </p>
@@ -296,18 +288,42 @@ async function initDatabase() {
   await pool.query(`
     ALTER TABLE users
       ADD COLUMN IF NOT EXISTS username VARCHAR(40);
+  `);
 
-    UPDATE users
-    SET username =
-      LEFT(
-        COALESCE(
-          NULLIF(regexp_replace(lower(name), '[^a-z0-9_]', '', 'g'), ''),
-          'user'
-        ),
-        12
-      ) || id::text
-    WHERE username IS NULL;
+  const { rows } = await pool.query(`
+    SELECT id, name
+    FROM users
+    WHERE username IS NULL OR BTRIM(username) = ''
+    ORDER BY id
+  `);
 
+  for (const user of rows) {
+    const base = cleanUsername(user.name)
+      .replace(/[^a-z0-9_]/g, '')
+      .slice(0, 12) || 'user';
+
+    let candidate = `${base}${user.id}`.slice(0, 24);
+    let suffix = 1;
+
+    while (true) {
+      const existing = await pool.query(
+        'SELECT id FROM users WHERE username = $1 AND id <> $2',
+        [candidate, user.id]
+      );
+
+      if (!existing.rows.length) break;
+
+      const ending = String(user.id) + String(suffix++);
+      candidate = `${base.slice(0, 24 - ending.length)}${ending}`;
+    }
+
+    await pool.query(
+      'UPDATE users SET username = $1 WHERE id = $2',
+      [candidate, user.id]
+    );
+  }
+
+  await pool.query(`
     ALTER TABLE users
       ALTER COLUMN username SET NOT NULL;
 
@@ -335,12 +351,12 @@ app.get('/api/captcha', (req, res) => {
   req.session.captchaAnswer = first + second;
 
   res.set('Cache-Control', 'no-store');
-  res.json({
-    question: `${first} + ${second} = ?`
-  });
+  res.json({ question: `${first} + ${second} = ?` });
 });
 
 app.get('/api/auth/me', asyncRoute(async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+
   if (!req.session.userId) {
     return res.json({ user: null });
   }
@@ -359,7 +375,6 @@ app.get('/api/auth/me', asyncRoute(async (req, res) => {
     return res.json({ user: null });
   }
 
-  res.set('Cache-Control', 'no-store');
   res.json({
     user: {
       id: user.id,
@@ -381,7 +396,14 @@ app.post('/api/auth/register', registerLimiter, asyncRoute(async (req, res) => {
   }
 
   const name = String(req.body.name || '').trim();
-  const username = cleanUsername(req.body.username);
+
+  const username = cleanUsername(
+    req.body.username ??
+    req.body.userName ??
+    req.body.registerUsername ??
+    req.body.handle
+  );
+
   const email = cleanEmail(req.body.email);
   const password = String(req.body.password || '');
 
@@ -393,7 +415,7 @@ app.post('/api/auth/register', registerLimiter, asyncRoute(async (req, res) => {
 
   if (!/^[a-z0-9_]{3,24}$/.test(username)) {
     return res.status(400).json({
-      error: 'Username-ul trebuie să aibă între 3 și 24 de caractere și poate conține doar litere mici, cifre și underscore.'
+      error: 'Username-ul trebuie să aibă între 3 și 24 de caractere și să conțină doar litere, cifre sau underscore (_).'
     });
   }
 
@@ -436,7 +458,7 @@ app.post('/api/auth/register', registerLimiter, asyncRoute(async (req, res) => {
 
     if (!expired) {
       return res.status(409).json({
-        error: 'Există deja un cont neconfirmat pentru acest email. Folosește alt email sau așteaptă expirarea codului.'
+        error: 'Există deja un cont neconfirmat pentru acest email. Așteaptă expirarea codului sau folosește alt email.'
       });
     }
 
@@ -447,7 +469,7 @@ app.post('/api/auth/register', registerLimiter, asyncRoute(async (req, res) => {
   }
 
   const existingUsername = await pool.query(
-    'SELECT id FROM users WHERE username = $1',
+    'SELECT id FROM users WHERE LOWER(username) = $1',
     [username]
   );
 
@@ -476,7 +498,7 @@ app.post('/api/auth/register', registerLimiter, asyncRoute(async (req, res) => {
   } catch (error) {
     if (error.code === '23505') {
       return res.status(409).json({
-        error: 'Emailul sau username-ul este deja folosit.'
+        error: 'Emailul sau username-ul este deja folosit. Încearcă alt username.'
       });
     }
     throw error;
@@ -536,9 +558,7 @@ app.post('/api/auth/verify-code', authLimiter, asyncRoute(async (req, res) => {
     });
   }
 
-  const matches = await bcrypt.compare(code, user.verification_token_hash);
-
-  if (!matches) {
+  if (!(await bcrypt.compare(code, user.verification_token_hash))) {
     return res.status(400).json({
       error: 'Codul introdus este incorect.'
     });
@@ -564,19 +584,13 @@ app.post('/api/auth/verify-code', authLimiter, asyncRoute(async (req, res) => {
   }
 
   await new Promise((resolve, reject) => {
-    req.session.regenerate(error => {
-      if (error) return reject(error);
-      resolve();
-    });
+    req.session.regenerate(error => error ? reject(error) : resolve());
   });
 
   req.session.userId = user.id;
 
   await new Promise((resolve, reject) => {
-    req.session.save(error => {
-      if (error) return reject(error);
-      resolve();
-    });
+    req.session.save(error => error ? reject(error) : resolve());
   });
 
   res.json({
@@ -667,10 +681,7 @@ app.post('/api/auth/login', authLimiter, asyncRoute(async (req, res) => {
   }
 
   await new Promise((resolve, reject) => {
-    req.session.regenerate(error => {
-      if (error) return reject(error);
-      resolve();
-    });
+    req.session.regenerate(error => error ? reject(error) : resolve());
   });
 
   req.session.userId = user.id;
@@ -681,10 +692,7 @@ app.post('/api/auth/login', authLimiter, asyncRoute(async (req, res) => {
   );
 
   await new Promise((resolve, reject) => {
-    req.session.save(error => {
-      if (error) return reject(error);
-      resolve();
-    });
+    req.session.save(error => error ? reject(error) : resolve());
   });
 
   res.json({
@@ -700,12 +708,11 @@ app.post('/api/auth/login', authLimiter, asyncRoute(async (req, res) => {
 }));
 
 app.post('/api/auth/logout', asyncRoute(async (req, res) => {
-  await new Promise((resolve, reject) => {
-    req.session.destroy(error => {
-      if (error) return reject(error);
-      resolve();
+  if (req.session) {
+    await new Promise((resolve, reject) => {
+      req.session.destroy(error => error ? reject(error) : resolve());
     });
-  });
+  }
 
   res.clearCookie('mysiteofficial.sid', {
     httpOnly: true,
@@ -723,15 +730,11 @@ app.post('/api/contact', contactLimiter, asyncRoute(async (req, res) => {
   const message = String(req.body.message || '').trim();
 
   if (name.length < 2 || name.length > 100) {
-    return res.status(400).json({
-      error: 'Introdu un nume valid.'
-    });
+    return res.status(400).json({ error: 'Introdu un nume valid.' });
   }
 
   if (!validEmail(email)) {
-    return res.status(400).json({
-      error: 'Introdu o adresă de email validă.'
-    });
+    return res.status(400).json({ error: 'Introdu o adresă de email validă.' });
   }
 
   const allowedServices = [
@@ -743,9 +746,7 @@ app.post('/api/contact', contactLimiter, asyncRoute(async (req, res) => {
   ];
 
   if (!allowedServices.includes(service)) {
-    return res.status(400).json({
-      error: 'Selectează un serviciu valid.'
-    });
+    return res.status(400).json({ error: 'Selectează un serviciu valid.' });
   }
 
   if (message.length < 10 || message.length > 5000) {
