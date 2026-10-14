@@ -1,3 +1,4 @@
+```javascript
 require('dotenv').config();
 
 const express = require('express');
@@ -13,6 +14,7 @@ const path = require('path');
 const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
 const PORT = process.env.PORT || 3000;
+const SESSION_NAME = 'mysiteofficial.sid';
 
 if (!process.env.DATABASE_URL) {
   console.error('Missing DATABASE_URL environment variable.');
@@ -30,6 +32,10 @@ const pool = new Pool({
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000
+});
+
+pool.on('error', error => {
+  console.error('Unexpected PostgreSQL pool error:', error);
 });
 
 const PgSession = connectPgSimple(session);
@@ -64,7 +70,7 @@ app.use(session({
     tableName: 'user_sessions',
     createTableIfMissing: true
   }),
-  name: 'mysiteofficial.sid',
+  name: SESSION_NAME,
   secret: process.env.SESSION_SECRET || 'development-only-change-this-secret',
   resave: false,
   saveUninitialized: false,
@@ -82,7 +88,9 @@ const authLimiter = rateLimit({
   limit: 15,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
-  message: { error: 'Prea multe încercări. Încearcă din nou peste 15 minute.' }
+  message: {
+    error: 'Prea multe încercări. Încearcă din nou peste 15 minute.'
+  }
 });
 
 const registerLimiter = rateLimit({
@@ -90,7 +98,9 @@ const registerLimiter = rateLimit({
   limit: 5,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
-  message: { error: 'Ai depășit numărul de înregistrări permise. Încearcă din nou mai târziu.' }
+  message: {
+    error: 'Ai depășit numărul de înregistrări permise. Încearcă din nou mai târziu.'
+  }
 });
 
 const contactLimiter = rateLimit({
@@ -98,7 +108,9 @@ const contactLimiter = rateLimit({
   limit: 5,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
-  message: { error: 'Ai trimis prea multe mesaje. Încearcă din nou mai târziu.' }
+  message: {
+    error: 'Ai trimis prea multe mesaje. Încearcă din nou mai târziu.'
+  }
 });
 
 function cleanEmail(value) {
@@ -110,7 +122,8 @@ function cleanUsername(value) {
 }
 
 function validEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 254;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) &&
+    email.length <= 254;
 }
 
 function hashToken(token) {
@@ -149,10 +162,21 @@ function requireCaptcha(req, res) {
     res.status(400).json({
       error: 'Răspunsul la verificare este incorect. Reîncarcă verificarea și încearcă din nou.'
     });
+
     return false;
   }
 
   return true;
+}
+
+function escapeHtml(value) {
+  return String(value || '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  })[char]);
 }
 
 async function sendVerificationEmail(email, name, code) {
@@ -248,16 +272,6 @@ async function sendContactEmail({ name, email, service, message }) {
   }
 }
 
-function escapeHtml(value) {
-  return String(value || '').replace(/[&<>"']/g, char => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
-  })[char]);
-}
-
 async function initDatabase() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
@@ -313,8 +327,8 @@ async function initDatabase() {
 
       if (!existing.rows.length) break;
 
-      const ending = String(user.id) + String(suffix++);
-      candidate = `${base.slice(0, 24 - ending.length)}${ending}`;
+      const ending = `${user.id}${suffix++}`;
+      candidate = `${base.slice(0, Math.max(1, 24 - ending.length))}${ending}`;
     }
 
     await pool.query(
@@ -338,21 +352,30 @@ app.get('/api/health', asyncRoute(async (req, res) => {
 }));
 
 app.get('/api/config', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+
   res.json({
     emailConfigured: emailIsConfigured(),
     contactConfigured: Boolean(process.env.CONTACT_EMAIL)
   });
 });
 
-app.get('/api/captcha', (req, res) => {
+app.get('/api/captcha', asyncRoute(async (req, res) => {
   const first = crypto.randomInt(2, 10);
   const second = crypto.randomInt(1, 10);
 
   req.session.captchaAnswer = first + second;
 
   res.set('Cache-Control', 'no-store');
-  res.json({ question: `${first} + ${second} = ?` });
-});
+
+  await new Promise((resolve, reject) => {
+    req.session.save(error => error ? reject(error) : resolve());
+  });
+
+  res.json({
+    question: `${first} + ${second} = ?`
+  });
+}));
 
 app.get('/api/auth/me', asyncRoute(async (req, res) => {
   res.set('Cache-Control', 'no-store');
@@ -501,6 +524,7 @@ app.post('/api/auth/register', registerLimiter, asyncRoute(async (req, res) => {
         error: 'Emailul sau username-ul este deja folosit. Încearcă alt username.'
       });
     }
+
     throw error;
   }
 
@@ -714,7 +738,7 @@ app.post('/api/auth/logout', asyncRoute(async (req, res) => {
     });
   }
 
-  res.clearCookie('mysiteofficial.sid', {
+  res.clearCookie(SESSION_NAME, {
     httpOnly: true,
     secure: isProduction,
     sameSite: 'lax'
@@ -730,11 +754,15 @@ app.post('/api/contact', contactLimiter, asyncRoute(async (req, res) => {
   const message = String(req.body.message || '').trim();
 
   if (name.length < 2 || name.length > 100) {
-    return res.status(400).json({ error: 'Introdu un nume valid.' });
+    return res.status(400).json({
+      error: 'Introdu un nume valid.'
+    });
   }
 
   if (!validEmail(email)) {
-    return res.status(400).json({ error: 'Introdu o adresă de email validă.' });
+    return res.status(400).json({
+      error: 'Introdu o adresă de email validă.'
+    });
   }
 
   const allowedServices = [
@@ -746,7 +774,9 @@ app.post('/api/contact', contactLimiter, asyncRoute(async (req, res) => {
   ];
 
   if (!allowedServices.includes(service)) {
-    return res.status(400).json({ error: 'Selectează un serviciu valid.' });
+    return res.status(400).json({
+      error: 'Selectează un serviciu valid.'
+    });
   }
 
   if (message.length < 10 || message.length > 5000) {
@@ -787,7 +817,9 @@ app.use(express.static(publicDir, {
 
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api/')) {
-    return res.status(404).json({ error: 'Endpoint inexistent.' });
+    return res.status(404).json({
+      error: 'Endpoint inexistent.'
+    });
   }
 
   res.sendFile(path.join(publicDir, 'index.html'), error => {
@@ -798,7 +830,9 @@ app.get('*', (req, res, next) => {
 app.use((error, req, res, next) => {
   console.error('Server error:', error);
 
-  if (res.headersSent) return next(error);
+  if (res.headersSent) {
+    return next(error);
+  }
 
   res.status(500).json({
     error: 'A apărut o eroare pe server. Încearcă din nou.'
@@ -815,3 +849,4 @@ initDatabase()
     console.error('Database initialization failed:', error);
     process.exit(1);
   });
+```
