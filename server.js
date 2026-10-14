@@ -1,61 +1,72 @@
+
 require('dotenv').config();
 
 const express = require('express');
 const session = require('express-session');
-const pgSession = require('connect-pg-simple')(session);
+const connectPgSimple = require('connect-pg-simple');
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const helmet = require('helmet');
-const { rateLimit } = require('express-rate-limit');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 
 const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = process.env.PORT || 3000;
 
 if (!process.env.DATABASE_URL) {
-  console.error('Missing DATABASE_URL. Add a PostgreSQL connection string (Render Blueprint creates one automatically).');
+  console.error('Missing DATABASE_URL environment variable.');
   process.exit(1);
 }
-if (!process.env.SESSION_SECRET && isProduction) {
-  console.error('Missing SESSION_SECRET. Configure a strong random secret in the hosting environment.');
+
+if (isProduction && !process.env.SESSION_SECRET) {
+  console.error('Missing SESSION_SECRET environment variable.');
   process.exit(1);
 }
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: isProduction ? { rejectUnauthorized: false } : undefined,
+  ssl: isProduction ? { rejectUnauthorized: false } : false,
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000
 });
 
-app.set('trust proxy', 1);
+const PgSession = connectPgSimple(session);
+
 app.disable('x-powered-by');
+app.set('trust proxy', 1);
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      baseUri: ["'self'"],
-      fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],
-      imgSrc: ["'self'", 'data:', 'https:'],
-      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+      imgSrc: ["'self'", 'data:', 'https:'],
       connectSrc: ["'self'"],
       formAction: ["'self'"],
-      frameAncestors: ["'none'"]
+      frameAncestors: ["'none'"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: isProduction ? [] : null
     }
   },
   crossOriginEmbedderPolicy: false
 }));
+
 app.use(express.json({ limit: '20kb' }));
 app.use(express.urlencoded({ extended: false, limit: '20kb' }));
 
 app.use(session({
-  store: new pgSession({ pool, tableName: 'user_sessions', createTableIfMissing: true }),
+  store: new PgSession({
+    pool,
+    tableName: 'user_sessions',
+    createTableIfMissing: true
+  }),
   name: 'mysiteofficial.sid',
-  secret: process.env.SESSION_SECRET || 'local-development-only-change-me',
+  secret: process.env.SESSION_SECRET || 'development-only-change-this-secret',
   resave: false,
   saveUninitialized: false,
   rolling: true,
@@ -63,7 +74,7 @@ app.use(session({
     httpOnly: true,
     secure: isProduction,
     sameSite: 'lax',
-    maxAge: 1000 * 60 * 60 * 24 * 7
+    maxAge: 7 * 24 * 60 * 60 * 1000
   }
 }));
 
@@ -72,54 +83,87 @@ const authLimiter = rateLimit({
   limit: 15,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
-  message: { error: 'Ai făcut prea multe încercări. Încearcă din nou peste câteva minute.' }
+  message: { error: 'Prea multe încercări. Încearcă din nou peste 15 minute.' }
 });
+
 const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   limit: 5,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
-  message: { error: 'Ai atins limita de înregistrări. Încearcă din nou mai târziu.' }
+  message: { error: 'Ai depășit numărul de înregistrări permise. Încearcă din nou mai târziu.' }
+});
+
+const contactLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'Ai trimis prea multe mesaje. Încearcă din nou mai târziu.' }
 });
 
 function cleanEmail(value) {
   return String(value || '').trim().toLowerCase();
 }
-function validEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) && email.length <= 254;
+
+function cleanUsername(value) {
+  return String(value || '').trim().toLowerCase();
 }
+
+function validEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 254;
+}
+
 function hashToken(token) {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
+
 function safeEqual(a, b) {
-  const left = Buffer.from(String(a));
-  const right = Buffer.from(String(b));
-  return left.length === right.length && crypto.timingSafeEqual(left, right);
-}
-function escapeHtml(value) {
-  return String(value || '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
-}
-function emailIsConfigured() {
-  return Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM);
-}
-function requireCaptcha(req, res) {
-  const stored = req.session.mathCaptcha;
-  const answer = String(req.body.captchaAnswer ?? '').trim();
-  req.session.mathCaptcha = null;
-  if (!stored || Date.now() > stored.expiresAt || !/^\d{1,3}$/.test(answer) || !safeEqual(answer, String(stored.answer))) {
-    res.status(400).json({ error: 'Verificarea anti-robot nu este corectă. Rezolvă noul calcul și încearcă din nou.' });
-    return false;
-  }
-  return true;
-}
-function asyncRoute(handler) {
-  return (req, res, next) => Promise.resolve(handler(req, res, next)).catch(next);
+  const first = Buffer.from(String(a));
+  const second = Buffer.from(String(b));
+
+  return first.length === second.length &&
+    crypto.timingSafeEqual(first, second);
 }
 
-async function sendVerificationEmail(email, name, token, req) {
-  const baseUrl = (process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
-  const verifyUrl = `${baseUrl}/api/auth/verify?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
-  const escapedName = escapeHtml(name || 'acolo');
+function emailIsConfigured() {
+  return Boolean(
+    process.env.RESEND_API_KEY &&
+    process.env.RESEND_FROM
+  );
+}
+
+function asyncRoute(handler) {
+  return (req, res, next) => {
+    Promise.resolve(handler(req, res, next)).catch(next);
+  };
+}
+
+function requireCaptcha(req, res) {
+  const answer = String(req.body.captchaAnswer || '').trim();
+  const expected = req.session.captchaAnswer;
+
+  delete req.session.captchaAnswer;
+
+  if (
+    expected === undefined ||
+    answer === '' ||
+    !safeEqual(answer, String(expected))
+  ) {
+    res.status(400).json({
+      error: 'Răspunsul la verificare este incorect. Reîncarcă verificarea și încearcă din nou.'
+    });
+    return false;
+  }
+
+  return true;
+}
+
+async function sendVerificationEmail(email, name, code) {
+  if (!emailIsConfigured()) {
+    throw new Error('Email service is not configured.');
+  }
+
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -129,15 +173,97 @@ async function sendVerificationEmail(email, name, token, req) {
     body: JSON.stringify({
       from: process.env.RESEND_FROM,
       to: [email],
-      subject: 'Confirmă adresa de email — MySiteOfficial',
-      html: `<!doctype html><html><body style="margin:0;background:#080914;color:#f7f7fb;font-family:Arial,sans-serif;padding:32px"><div style="max-width:560px;margin:0 auto;background:#111326;border:1px solid #292b45;border-radius:22px;padding:32px"><p style="color:#a99bff;font-weight:700;letter-spacing:2px;font-size:12px">MYSITEOFFICIAL</p><h1 style="font-size:28px;line-height:1.2">Bine ai venit, ${escapedName}.</h1><p style="color:#c6c7d8;line-height:1.7">Mai este un singur pas: confirmă adresa ta de email pentru a-ți activa contul.</p><p style="margin:28px 0"><a href="${verifyUrl}" style="display:inline-block;background:#8d70ff;color:#fff;text-decoration:none;padding:14px 22px;border-radius:12px;font-weight:700">Confirmă adresa de email</a></p><p style="color:#9698af;font-size:13px;line-height:1.6">Dacă butonul nu funcționează, copiază acest link în browser:<br><a href="${verifyUrl}" style="color:#b7aaff;word-break:break-all">${verifyUrl}</a></p><p style="color:#777991;font-size:12px;margin-top:28px">Dacă nu ai creat acest cont, poți ignora mesajul.</p></div></body></html>`
+      subject: 'Codul tău de verificare — MySiteOfficial',
+      html: `
+        <!doctype html>
+        <html lang="ro">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+          </head>
+          <body style="margin:0;padding:0;background:#08090d;color:#f5f5f7;font-family:Arial,sans-serif">
+            <div style="max-width:560px;margin:0 auto;padding:40px 22px">
+              <div style="font-size:23px;font-weight:800;letter-spacing:-1px;margin-bottom:34px">
+                MySite<span style="color:#a78bfa">Official</span>
+              </div>
+              <div style="padding:30px;border:1px solid #282832;border-radius:18px;background:#111117">
+                <p style="color:#b8b8c5;font-size:13px;letter-spacing:2px;text-transform:uppercase">
+                  Verificare email
+                </p>
+                <h1 style="font-size:27px;line-height:1.3;margin:12px 0">
+                  Salut, ${escapeHtml(name)}!
+                </h1>
+                <p style="color:#c4c4d0;line-height:1.7">
+                  Folosește codul de mai jos pentru a-ți confirma adresa de email și a-ți activa contul.
+                </p>
+                <div style="margin:28px 0;padding:20px;text-align:center;border-radius:12px;background:#1c1b28;border:1px solid #38334f">
+                  <span style="font-size:36px;letter-spacing:10px;font-weight:800;color:#c4b5fd">${code}</span>
+                </div>
+                <p style="color:#aaaab9;line-height:1.7;font-size:14px">
+                  Codul este valabil timp de 10 minute. Nu îl distribui nimănui.
+                </p>
+              </div>
+              <p style="font-size:12px;color:#777785;line-height:1.6;margin-top:24px">
+                Dacă nu ai solicitat crearea unui cont, poți ignora acest mesaj.
+              </p>
+            </div>
+          </body>
+        </html>
+      `
     })
   });
+
   if (!response.ok) {
-    const errorText = await response.text().catch(() => '');
-    console.error('Resend email error:', response.status, errorText.slice(0, 500));
-    throw new Error('EMAIL_DELIVERY_FAILED');
+    const details = await response.text();
+    console.error('Resend verification email failed:', response.status, details);
+    throw new Error('Verification email could not be sent.');
   }
+}
+
+async function sendContactEmail({ name, email, service, message }) {
+  if (!emailIsConfigured() || !process.env.CONTACT_EMAIL) {
+    throw new Error('Contact email is not configured.');
+  }
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      from: process.env.RESEND_FROM,
+      to: [process.env.CONTACT_EMAIL],
+      reply_to: email,
+      subject: `Solicitare nouă MySiteOfficial — ${service}`,
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto">
+          <h2>Solicitare nouă de pe MySiteOfficial</h2>
+          <p><strong>Nume:</strong> ${escapeHtml(name)}</p>
+          <p><strong>Email:</strong> ${escapeHtml(email)}</p>
+          <p><strong>Serviciu:</strong> ${escapeHtml(service)}</p>
+          <h3>Mesaj</h3>
+          <p style="white-space:pre-wrap">${escapeHtml(message)}</p>
+        </div>
+      `
+    })
+  });
+
+  if (!response.ok) {
+    const details = await response.text();
+    console.error('Resend contact email failed:', response.status, details);
+    throw new Error('Contact email could not be sent.');
+  }
+}
+
+function escapeHtml(value) {
+  return String(value || '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  })[char]);
 }
 
 async function initDatabase() {
@@ -153,177 +279,538 @@ async function initDatabase() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       last_login_at TIMESTAMPTZ
     );
-    CREATE INDEX IF NOT EXISTS users_verification_expiry_idx ON users (verification_expires_at);
+
+    CREATE INDEX IF NOT EXISTS users_verification_expiry_idx
+      ON users (verification_expires_at);
+
     CREATE TABLE IF NOT EXISTS contact_messages (
       id BIGSERIAL PRIMARY KEY,
       name VARCHAR(100) NOT NULL,
       email VARCHAR(254) NOT NULL,
-      service VARCHAR(80) NOT NULL,
-      budget VARCHAR(60) NOT NULL,
+      service VARCHAR(100) NOT NULL,
       message TEXT NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
   `);
+
+  await pool.query(`
+    ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS username VARCHAR(40);
+
+    UPDATE users
+    SET username =
+      LEFT(
+        COALESCE(
+          NULLIF(regexp_replace(lower(name), '[^a-z0-9_]', '', 'g'), ''),
+          'user'
+        ),
+        12
+      ) || id::text
+    WHERE username IS NULL;
+
+    ALTER TABLE users
+      ALTER COLUMN username SET NOT NULL;
+
+    CREATE UNIQUE INDEX IF NOT EXISTS users_username_unique
+      ON users (username);
+  `);
 }
 
-app.get('/api/health', (req, res) => res.json({ ok: true, service: 'MySiteOfficial' }));
+app.get('/api/health', asyncRoute(async (req, res) => {
+  await pool.query('SELECT 1');
+  res.json({ status: 'ok' });
+}));
 
 app.get('/api/config', (req, res) => {
-  res.json({ emailVerificationConfigured: emailIsConfigured() });
+  res.json({
+    emailConfigured: emailIsConfigured(),
+    contactConfigured: Boolean(process.env.CONTACT_EMAIL)
+  });
 });
 
 app.get('/api/captcha', (req, res) => {
-  const a = crypto.randomInt(2, 10);
-  const b = crypto.randomInt(1, 10);
-  const plus = Math.random() > 0.25;
-  const left = Math.max(a, b);
-  const right = Math.min(a, b);
-  const answer = plus ? a + b : left - right;
-  req.session.mathCaptcha = { answer, expiresAt: Date.now() + 5 * 60 * 1000 };
+  const first = crypto.randomInt(2, 10);
+  const second = crypto.randomInt(1, 10);
+
+  req.session.captchaAnswer = first + second;
+
   res.set('Cache-Control', 'no-store');
-  res.json({ question: `${plus ? a : left} ${plus ? '+' : '−'} ${plus ? b : right} = ?` });
+  res.json({
+    question: `${first} + ${second} = ?`
+  });
 });
 
 app.get('/api/auth/me', asyncRoute(async (req, res) => {
-  if (!req.session.userId) return res.json({ user: null });
-  const { rows } = await pool.query('SELECT id, name, email, is_verified FROM users WHERE id = $1', [req.session.userId]);
-  if (!rows[0] || !rows[0].is_verified) {
+  if (!req.session.userId) {
+    return res.json({ user: null });
+  }
+
+  const { rows } = await pool.query(
+    `SELECT id, name, username, email, is_verified
+     FROM users
+     WHERE id = $1`,
+    [req.session.userId]
+  );
+
+  const user = rows[0];
+
+  if (!user || !user.is_verified) {
     req.session.userId = null;
     return res.json({ user: null });
   }
-  res.json({ user: { id: rows[0].id, name: rows[0].name, email: rows[0].email, isVerified: rows[0].is_verified } });
+
+  res.set('Cache-Control', 'no-store');
+  res.json({
+    user: {
+      id: user.id,
+      name: user.name,
+      username: user.username,
+      email: user.email,
+      isVerified: user.is_verified
+    }
+  });
 }));
 
 app.post('/api/auth/register', registerLimiter, asyncRoute(async (req, res) => {
   if (!requireCaptcha(req, res)) return;
+
   if (!emailIsConfigured()) {
-    return res.status(503).json({ error: 'Înregistrarea cu verificare prin email nu este încă activată pe server. Configurează RESEND_API_KEY și RESEND_FROM în Render.' });
+    return res.status(503).json({
+      error: 'Verificarea prin email nu este configurată momentan.'
+    });
   }
 
-  const name = String(req.body.name || '').trim().replace(/\s+/g, ' ');
+  const name = String(req.body.name || '').trim();
+  const username = cleanUsername(req.body.username);
   const email = cleanEmail(req.body.email);
   const password = String(req.body.password || '');
-  if (name.length < 2 || name.length > 80) return res.status(400).json({ error: 'Introdu un nume între 2 și 80 de caractere.' });
-  if (!validEmail(email)) return res.status(400).json({ error: 'Introdu o adresă de email validă.' });
-  if (password.length < 8 || password.length > 72) return res.status(400).json({ error: 'Parola trebuie să conțină între 8 și 72 de caractere.' });
-  if (!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/\d/.test(password)) {
-    return res.status(400).json({ error: 'Alege o parolă cu cel puțin o literă mică, una mare și o cifră.' });
+
+  if (name.length < 2 || name.length > 80) {
+    return res.status(400).json({
+      error: 'Numele trebuie să aibă între 2 și 80 de caractere.'
+    });
   }
 
-  const existing = await pool.query('SELECT id, is_verified, verification_expires_at FROM users WHERE email = $1', [email]);
-  if (existing.rows[0]) {
-    const previous = existing.rows[0];
-    const verificationExpired = !previous.verification_expires_at || new Date(previous.verification_expires_at).getTime() < Date.now();
-    if (!previous.is_verified && verificationExpired) {
-      await pool.query('DELETE FROM users WHERE id = $1 AND is_verified = FALSE', [previous.id]);
-    } else {
-      return res.status(409).json({ error: previous.is_verified ? 'Există deja un cont cu acest email. Intră în cont.' : 'Există deja un cont neconfirmat cu acest email. Verifică inboxul; poți solicita din nou înregistrarea dacă linkul expiră.' });
+  if (!/^[a-z0-9_]{3,24}$/.test(username)) {
+    return res.status(400).json({
+      error: 'Username-ul trebuie să aibă între 3 și 24 de caractere și poate conține doar litere mici, cifre și underscore.'
+    });
+  }
+
+  if (!validEmail(email)) {
+    return res.status(400).json({
+      error: 'Introdu o adresă de email validă.'
+    });
+  }
+
+  if (
+    password.length < 8 ||
+    password.length > 72 ||
+    !/[a-z]/.test(password) ||
+    !/[A-Z]/.test(password) ||
+    !/[0-9]/.test(password)
+  ) {
+    return res.status(400).json({
+      error: 'Parola trebuie să aibă între 8 și 72 de caractere și să includă litere mici, litere mari și cel puțin o cifră.'
+    });
+  }
+
+  const existingEmail = await pool.query(
+    `SELECT id, is_verified, verification_expires_at
+     FROM users
+     WHERE email = $1`,
+    [email]
+  );
+
+  if (existingEmail.rows.length) {
+    const existing = existingEmail.rows[0];
+
+    if (existing.is_verified) {
+      return res.status(409).json({
+        error: 'Există deja un cont cu această adresă de email.'
+      });
     }
+
+    const expired = !existing.verification_expires_at ||
+      new Date(existing.verification_expires_at).getTime() < Date.now();
+
+    if (!expired) {
+      return res.status(409).json({
+        error: 'Există deja un cont neconfirmat pentru acest email. Folosește alt email sau așteaptă expirarea codului.'
+      });
+    }
+
+    await pool.query(
+      'DELETE FROM users WHERE id = $1 AND is_verified = FALSE',
+      [existing.id]
+    );
+  }
+
+  const existingUsername = await pool.query(
+    'SELECT id FROM users WHERE username = $1',
+    [username]
+  );
+
+  if (existingUsername.rows.length) {
+    return res.status(409).json({
+      error: 'Acest username este deja folosit. Alege altul.'
+    });
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
-  const token = crypto.randomBytes(32).toString('hex');
-  const tokenHash = hashToken(token);
-  const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24);
-  const created = await pool.query(
-    'INSERT INTO users (name, email, password_hash, verification_token_hash, verification_expires_at) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-    [name, email, passwordHash, tokenHash, expiresAt]
-  );
+  const code = String(crypto.randomInt(100000, 1000000));
+  const codeHash = await bcrypt.hash(code, 10);
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+  let created;
+
   try {
-    await sendVerificationEmail(email, name, token, req);
+    created = await pool.query(
+      `INSERT INTO users
+        (name, username, email, password_hash,
+         verification_token_hash, verification_expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id`,
+      [name, username, email, passwordHash, codeHash, expiresAt]
+    );
   } catch (error) {
-    await pool.query('DELETE FROM users WHERE id = $1 AND is_verified = FALSE', [created.rows[0].id]);
-    return res.status(502).json({ error: 'Nu am putut trimite emailul de confirmare. Verifică setările Resend și domeniul expeditorului, apoi încearcă din nou.' });
+    if (error.code === '23505') {
+      return res.status(409).json({
+        error: 'Emailul sau username-ul este deja folosit.'
+      });
+    }
+    throw error;
   }
-  res.status(201).json({ message: 'Contul a fost creat. Verifică inboxul și apasă linkul de confirmare; linkul expiră în 24 de ore.' });
+
+  try {
+    await sendVerificationEmail(email, name, code);
+  } catch (error) {
+    await pool.query(
+      'DELETE FROM users WHERE id = $1 AND is_verified = FALSE',
+      [created.rows[0].id]
+    );
+
+    return res.status(502).json({
+      error: 'Nu am putut trimite codul. Verifică setările Resend și încearcă din nou.'
+    });
+  }
+
+  res.status(201).json({
+    message: 'Am trimis un cod de 6 cifre pe email. Introdu codul în următoarele 10 minute.',
+    email
+  });
 }));
 
-app.post('/api/auth/login', authLimiter, asyncRoute(async (req, res) => {
-  if (!requireCaptcha(req, res)) return;
+app.post('/api/auth/verify-code', authLimiter, asyncRoute(async (req, res) => {
   const email = cleanEmail(req.body.email);
-  const password = String(req.body.password || '');
-  if (!validEmail(email) || !password) return res.status(400).json({ error: 'Introdu emailul și parola.' });
-  const { rows } = await pool.query('SELECT id, name, email, password_hash, is_verified FROM users WHERE email = $1', [email]);
-  const user = rows[0];
-  const passwordMatches = user ? await bcrypt.compare(password, user.password_hash) : false;
-  if (!passwordMatches) return res.status(401).json({ error: 'Emailul sau parola nu sunt corecte.' });
-  if (!user.is_verified) return res.status(403).json({ error: 'Trebuie să confirmi adresa de email înainte să intri în cont. Verifică inboxul.' });
+  const code = String(req.body.code || '').trim();
 
-  await new Promise((resolve, reject) => req.session.regenerate(error => error ? reject(error) : resolve()));
+  if (!validEmail(email) || !/^\d{6}$/.test(code)) {
+    return res.status(400).json({
+      error: 'Introdu adresa de email și codul de 6 cifre.'
+    });
+  }
+
+  const { rows } = await pool.query(
+    `SELECT id, name, username, email, verification_token_hash,
+            verification_expires_at, is_verified
+     FROM users
+     WHERE email = $1`,
+    [email]
+  );
+
+  const user = rows[0];
+
+  if (!user || user.is_verified || !user.verification_token_hash) {
+    return res.status(400).json({
+      error: 'Codul este invalid sau a fost deja folosit.'
+    });
+  }
+
+  if (
+    !user.verification_expires_at ||
+    new Date(user.verification_expires_at).getTime() < Date.now()
+  ) {
+    return res.status(400).json({
+      error: 'Codul a expirat. Începe din nou procesul de înregistrare.'
+    });
+  }
+
+  const matches = await bcrypt.compare(code, user.verification_token_hash);
+
+  if (!matches) {
+    return res.status(400).json({
+      error: 'Codul introdus este incorect.'
+    });
+  }
+
+  const update = await pool.query(
+    `UPDATE users
+     SET is_verified = TRUE,
+         verification_token_hash = NULL,
+         verification_expires_at = NULL,
+         last_login_at = NOW()
+     WHERE id = $1
+       AND is_verified = FALSE
+       AND verification_token_hash = $2
+     RETURNING id`,
+    [user.id, user.verification_token_hash]
+  );
+
+  if (!update.rows.length) {
+    return res.status(400).json({
+      error: 'Codul a fost deja folosit sau nu mai este valid.'
+    });
+  }
+
+  await new Promise((resolve, reject) => {
+    req.session.regenerate(error => {
+      if (error) return reject(error);
+      resolve();
+    });
+  });
+
   req.session.userId = user.id;
-  await pool.query('UPDATE users SET last_login_at = NOW() WHERE id = $1', [user.id]);
-  res.json({ message: 'Te-ai conectat cu succes.', user: { id: user.id, name: user.name, email: user.email, isVerified: user.is_verified } });
+
+  await new Promise((resolve, reject) => {
+    req.session.save(error => {
+      if (error) return reject(error);
+      resolve();
+    });
+  });
+
+  res.json({
+    message: 'Email confirmat! Contul tău este activ.',
+    user: {
+      id: user.id,
+      name: user.name,
+      username: user.username,
+      email: user.email,
+      isVerified: true
+    }
+  });
 }));
 
 app.get('/api/auth/verify', asyncRoute(async (req, res) => {
   const email = cleanEmail(req.query.email);
   const token = String(req.query.token || '');
-  const failUrl = '/?verification_error=1#auth';
-  if (!validEmail(email) || !/^[a-f0-9]{64}$/.test(token)) return res.redirect(failUrl);
-  const { rows } = await pool.query('SELECT id, verification_token_hash, verification_expires_at, is_verified FROM users WHERE email = $1', [email]);
-  const user = rows[0];
-  if (!user || user.is_verified || !user.verification_token_hash || !user.verification_expires_at || new Date(user.verification_expires_at).getTime() < Date.now() || !safeEqual(user.verification_token_hash, hashToken(token))) {
-    return res.redirect(failUrl);
+
+  if (!validEmail(email) || !/^[a-f0-9]{64}$/i.test(token)) {
+    return res.redirect('/?verification_error=1#auth');
   }
-  await pool.query('UPDATE users SET is_verified = TRUE, verification_token_hash = NULL, verification_expires_at = NULL WHERE id = $1', [user.id]);
-  return res.redirect('/?verified=1#auth');
+
+  const tokenHash = hashToken(token);
+
+  const { rows } = await pool.query(
+    `SELECT id, verification_token_hash, verification_expires_at, is_verified
+     FROM users
+     WHERE email = $1`,
+    [email]
+  );
+
+  const user = rows[0];
+
+  if (
+    !user ||
+    user.is_verified ||
+    !user.verification_token_hash ||
+    !user.verification_expires_at ||
+    new Date(user.verification_expires_at).getTime() < Date.now() ||
+    !safeEqual(user.verification_token_hash, tokenHash)
+  ) {
+    return res.redirect('/?verification_error=1#auth');
+  }
+
+  await pool.query(
+    `UPDATE users
+     SET is_verified = TRUE,
+         verification_token_hash = NULL,
+         verification_expires_at = NULL
+     WHERE id = $1`,
+    [user.id]
+  );
+
+  res.redirect('/?verified=1#auth');
+}));
+
+app.post('/api/auth/login', authLimiter, asyncRoute(async (req, res) => {
+  if (!requireCaptcha(req, res)) return;
+
+  const email = cleanEmail(req.body.email);
+  const password = String(req.body.password || '');
+
+  if (!validEmail(email) || !password || password.length > 72) {
+    return res.status(400).json({
+      error: 'Email sau parolă incorectă.'
+    });
+  }
+
+  const { rows } = await pool.query(
+    `SELECT id, name, username, email, password_hash, is_verified
+     FROM users
+     WHERE email = $1`,
+    [email]
+  );
+
+  const user = rows[0];
+
+  if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+    return res.status(401).json({
+      error: 'Email sau parolă incorectă.'
+    });
+  }
+
+  if (!user.is_verified) {
+    return res.status(403).json({
+      error: 'Trebuie să confirmi adresa de email înainte să te conectezi.'
+    });
+  }
+
+  await new Promise((resolve, reject) => {
+    req.session.regenerate(error => {
+      if (error) return reject(error);
+      resolve();
+    });
+  });
+
+  req.session.userId = user.id;
+
+  await pool.query(
+    'UPDATE users SET last_login_at = NOW() WHERE id = $1',
+    [user.id]
+  );
+
+  await new Promise((resolve, reject) => {
+    req.session.save(error => {
+      if (error) return reject(error);
+      resolve();
+    });
+  });
+
+  res.json({
+    message: 'Autentificare reușită.',
+    user: {
+      id: user.id,
+      name: user.name,
+      username: user.username,
+      email: user.email,
+      isVerified: user.is_verified
+    }
+  });
 }));
 
 app.post('/api/auth/logout', asyncRoute(async (req, res) => {
-  await new Promise(resolve => req.session.destroy(() => resolve()));
-  res.clearCookie('mysiteofficial.sid', { httpOnly: true, secure: isProduction, sameSite: 'lax' });
+  await new Promise((resolve, reject) => {
+    req.session.destroy(error => {
+      if (error) return reject(error);
+      resolve();
+    });
+  });
+
+  res.clearCookie('mysiteofficial.sid', {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: 'lax'
+  });
+
   res.json({ message: 'Te-ai deconectat.' });
 }));
 
-app.post('/api/contact', rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, standardHeaders: 'draft-7', legacyHeaders: false }), asyncRoute(async (req, res) => {
-  const name = String(req.body.name || '').trim().replace(/\s+/g, ' ');
+app.post('/api/contact', contactLimiter, asyncRoute(async (req, res) => {
+  const name = String(req.body.name || '').trim();
   const email = cleanEmail(req.body.email);
-  const service = String(req.body.service || '').trim().slice(0, 80);
-  const budget = String(req.body.budget || '').trim().slice(0, 60);
-  const message = String(req.body.message || '').trim().slice(0, 2500);
-  if (name.length < 2 || name.length > 100 || !validEmail(email) || !service || !budget || message.length < 10) {
-    return res.status(400).json({ error: 'Completează toate câmpurile și scrie un mesaj de cel puțin 10 caractere.' });
-  }
-  await pool.query('INSERT INTO contact_messages (name, email, service, budget, message) VALUES ($1, $2, $3, $4, $5)', [name, email, service, budget, message]);
+  const service = String(req.body.service || '').trim();
+  const message = String(req.body.message || '').trim();
 
-  let notified = false;
-  if (emailIsConfigured() && process.env.CONTACT_EMAIL) {
-    try {
-      const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          from: process.env.RESEND_FROM,
-          to: [process.env.CONTACT_EMAIL],
-          reply_to: email,
-          subject: `Solicitare nouă MySiteOfficial — ${service}`,
-          html: `<div style="font-family:Arial,sans-serif;line-height:1.7"><h2>Solicitare nouă de pe MySiteOfficial</h2><p><b>Nume:</b> ${escapeHtml(name)}</p><p><b>Email:</b> ${escapeHtml(email)}</p><p><b>Serviciu:</b> ${escapeHtml(service)}</p><p><b>Buget:</b> ${escapeHtml(budget)}</p><p><b>Mesaj:</b><br>${escapeHtml(message).replace(/\n/g, '<br>')}</p></div>`
-        })
-      });
-      notified = response.ok;
-      if (!response.ok) console.error('Contact notification failed:', response.status, (await response.text()).slice(0, 300));
-    } catch (error) { console.error('Contact notification error:', error.message); }
+  if (name.length < 2 || name.length > 100) {
+    return res.status(400).json({
+      error: 'Introdu un nume valid.'
+    });
   }
-  res.status(201).json({ message: notified ? 'Mesajul a fost trimis. Îți mulțumesc — revin cât de curând!' : 'Mesajul a fost înregistrat. Pentru a primi notificările pe email, configurează CONTACT_EMAIL și RESEND în Render.' });
+
+  if (!validEmail(email)) {
+    return res.status(400).json({
+      error: 'Introdu o adresă de email validă.'
+    });
+  }
+
+  const allowedServices = [
+    'Landing Page',
+    'Website Business',
+    'Magazin online',
+    'UI/UX Design',
+    'Alt proiect'
+  ];
+
+  if (!allowedServices.includes(service)) {
+    return res.status(400).json({
+      error: 'Selectează un serviciu valid.'
+    });
+  }
+
+  if (message.length < 10 || message.length > 5000) {
+    return res.status(400).json({
+      error: 'Mesajul trebuie să aibă între 10 și 5000 de caractere.'
+    });
+  }
+
+  await pool.query(
+    `INSERT INTO contact_messages (name, email, service, message)
+     VALUES ($1, $2, $3, $4)`,
+    [name, email, service, message]
+  );
+
+  try {
+    await sendContactEmail({ name, email, service, message });
+  } catch (error) {
+    console.error('Contact notification failed:', error.message);
+
+    return res.status(502).json({
+      error: 'Mesajul a fost salvat, dar notificarea email nu a putut fi trimisă. Te rugăm să încerci din nou mai târziu.'
+    });
+  }
+
+  res.status(201).json({
+    message: 'Mesajul tău a fost trimis cu succes. Îți vom răspunde în curând.'
+  });
 }));
 
-app.use(express.static(path.join(__dirname, 'public'), { maxAge: isProduction ? '1h' : 0, etag: true }));
-app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+const publicDir = path.join(__dirname, 'public');
 
-app.use((err, req, res, next) => {
-  console.error('Request error:', err && err.message ? err.message : err);
-  if (res.headersSent) return next(err);
-  res.status(500).json({ error: 'A apărut o eroare. Încearcă din nou.' });
+app.use(express.static(publicDir, {
+  index: false,
+  dotfiles: 'deny',
+  etag: true,
+  maxAge: isProduction ? '1h' : 0
+}));
+
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: 'Endpoint inexistent.' });
+  }
+
+  res.sendFile(path.join(publicDir, 'index.html'), error => {
+    if (error) next(error);
+  });
 });
 
-initDatabase().then(() => {
-  app.listen(PORT, '0.0.0.0', () => console.log(`MySiteOfficial running on port ${PORT}`));
-}).catch(error => {
-  console.error('Database initialization failed:', error.message);
-  process.exit(1);
+app.use((error, req, res, next) => {
+  console.error('Server error:', error);
+
+  if (res.headersSent) return next(error);
+
+  res.status(500).json({
+    error: 'A apărut o eroare pe server. Încearcă din nou.'
+  });
 });
 
-process.on('SIGTERM', async () => {
-  await pool.end().catch(() => {});
-  process.exit(0);
-});
+initDatabase()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`MySiteOfficial server running on port ${PORT}`);
+    });
+  })
+  .catch(error => {
+    console.error('Database initialization failed:', error);
+    process.exit(1);
+  });
