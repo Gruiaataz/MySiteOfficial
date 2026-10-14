@@ -1,4 +1,3 @@
-
 (() => {
   'use strict';
 
@@ -18,10 +17,12 @@
 
   function showToast(message, type = 'success') {
     if (!toastRegion) return;
+
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.textContent = message;
     toastRegion.appendChild(toast);
+
     window.setTimeout(() => toast.remove(), 5200);
   }
 
@@ -36,6 +37,7 @@
     });
 
     let data = {};
+
     try {
       data = await response.json();
     } catch (_) {}
@@ -53,6 +55,7 @@
 
   async function loadCaptcha() {
     const form = activeAuthTab === 'register' ? registerForm : loginForm;
+
     if (!form || form.hidden) return;
 
     const question = $('[data-captcha-question]', form);
@@ -63,6 +66,7 @@
 
     try {
       const data = await apiRequest('/api/captcha');
+
       if (question) question.textContent = data.question;
     } catch (_) {
       if (question) question.textContent = 'Reîncarcă verificarea';
@@ -71,6 +75,7 @@
 
   function setAuthMessage(form, message, isError = true) {
     const el = $('.auth-status', form);
+
     if (!el) return;
 
     el.textContent = message;
@@ -82,26 +87,32 @@
 
     const isRegister = activeAuthTab === 'register';
 
-    loginForm.hidden = isRegister;
-    registerForm.hidden = !isRegister;
-    authSuccess.hidden = true;
+    if (loginForm) loginForm.hidden = isRegister;
+    if (registerForm) registerForm.hidden = !isRegister;
+    if (authSuccess) authSuccess.hidden = true;
 
     $$('.auth-tab').forEach(el => {
       el.hidden = false;
     });
 
-    $('.auth-bottom').hidden = false;
+    const authBottom = $('.auth-bottom');
+    if (authBottom) authBottom.hidden = false;
 
-    authTitle.textContent = isRegister
-      ? 'Hai să creăm contul.'
-      : 'Mă bucur să te revăd.';
+    if (authTitle) {
+      authTitle.textContent = isRegister
+        ? 'Hai să creăm contul.'
+        : 'Mă bucur să te revăd.';
+    }
 
-    authSubtitle.textContent = isRegister
-      ? 'Alege un username și confirmă adresa de email.'
-      : 'Intră în cont pentru a continua.';
+    if (authSubtitle) {
+      authSubtitle.textContent = isRegister
+        ? 'Alege un username și confirmă adresa de email.'
+        : 'Intră în cont pentru a continua.';
+    }
 
     $$('[data-auth-tab]').forEach(button => {
       const active = button.dataset.authTab === activeAuthTab;
+
       button.classList.toggle('is-active', active);
       button.setAttribute('aria-selected', String(active));
     });
@@ -114,19 +125,22 @@
   }
 
   function openAuth(tab = 'login') {
+    if (!backdrop) return;
+
     backdrop.hidden = false;
     document.body.classList.add('modal-open');
     setAuthTab(tab);
 
     window.setTimeout(() => {
       const form = activeAuthTab === 'register' ? registerForm : loginForm;
-      const first = $('input:not([type="hidden"])', form);
+      const first = form && $('input:not([type="hidden"])', form);
+
       if (first) first.focus({ preventScroll: true });
     }, 80);
   }
 
   function closeAuth() {
-    backdrop.hidden = true;
+    if (backdrop) backdrop.hidden = true;
     document.body.classList.remove('modal-open');
   }
 
@@ -135,14 +149,15 @@
       el.hidden = false;
     });
 
-    $('.auth-bottom').hidden = false;
+    const authBottom = $('.auth-bottom');
+    if (authBottom) authBottom.hidden = false;
 
-    loginForm.reset();
-    registerForm.reset();
+    if (loginForm) loginForm.reset();
+    if (registerForm) registerForm.reset();
+    if (authSuccess) authSuccess.hidden = true;
 
-    authSuccess.hidden = true;
-    loginForm.hidden = false;
-    registerForm.hidden = true;
+    if (loginForm) loginForm.hidden = false;
+    if (registerForm) registerForm.hidden = true;
 
     pendingVerificationEmail = '';
 
@@ -167,8 +182,7 @@
     if (!user) {
       pill.hidden = true;
 
-      const navLogin = $$('.nav-login');
-      navLogin.forEach(button => {
+      $$('.nav-login').forEach(button => {
         button.hidden = false;
       });
 
@@ -196,20 +210,23 @@
   }
 
   function showVerificationForm(email, message) {
-    pendingVerificationEmail = email;
+    pendingVerificationEmail = String(email || '').trim().toLowerCase();
 
-    loginForm.hidden = true;
-    registerForm.hidden = true;
-    authSuccess.hidden = true;
+    if (loginForm) loginForm.hidden = true;
+    if (registerForm) registerForm.hidden = true;
+    if (authSuccess) authSuccess.hidden = true;
 
     $$('.auth-tab').forEach(el => {
       el.hidden = true;
     });
 
-    $('.auth-bottom').hidden = true;
+    const authBottom = $('.auth-bottom');
+    if (authBottom) authBottom.hidden = true;
 
-    authTitle.textContent = 'Verifică-ți emailul.';
-    authSubtitle.textContent = 'Introdu codul de 6 cifre pe care l-am trimis.';
+    if (authTitle) authTitle.textContent = 'Verifică-ți emailul.';
+    if (authSubtitle) {
+      authSubtitle.textContent = 'Introdu codul de 6 cifre pe care l-am trimis.';
+    }
 
     let form = $('#verificationForm');
 
@@ -248,13 +265,18 @@
         </button>
       `;
 
-      $('.auth-heading').after(form);
+      const heading = $('.auth-heading');
+
+      if (heading) {
+        heading.after(form);
+      } else if (backdrop) {
+        backdrop.appendChild(form);
+      }
 
       form.addEventListener('submit', async event => {
         event.preventDefault();
 
         const submit = $('button[type="submit"]', form);
-        const status = $('.auth-status', form);
         const data = Object.fromEntries(new FormData(form).entries());
 
         data.email = pendingVerificationEmail || data.email;
@@ -270,7 +292,7 @@
           submit.style.opacity = '.65';
         }
 
-        if (status) status.textContent = '';
+        setAuthMessage(form, '');
 
         try {
           const result = await apiRequest('/api/auth/verify-code', {
@@ -299,24 +321,37 @@
         }
       });
 
-      $('#backToRegister').addEventListener('click', () => {
-        form.remove();
-        setAuthTab('register');
-      });
+      const backButton = $('#backToRegister', form);
+
+      if (backButton) {
+        backButton.addEventListener('click', () => {
+          form.remove();
+          setAuthTab('register');
+        });
+      }
     }
 
     form.hidden = false;
-    form.elements.email.value = email;
-    form.elements.code.value = '';
+
+    if (form.elements.email) {
+      form.elements.email.value = pendingVerificationEmail;
+    }
+
+    if (form.elements.code) {
+      form.elements.code.value = '';
+    }
 
     const status = $('.auth-status', form);
+
     if (status) {
       status.textContent = message || '';
       status.style.color = '#8de1d0';
     }
 
     window.setTimeout(() => {
-      form.elements.code.focus({ preventScroll: true });
+      if (form.elements.code) {
+        form.elements.code.focus({ preventScroll: true });
+      }
     }, 80);
   }
 
@@ -324,15 +359,38 @@
     event.preventDefault();
 
     const submit = $('button[type="submit"]', form);
-    const status = $('.auth-status', form);
     const data = Object.fromEntries(new FormData(form).entries());
+
+    if (endpoint.endsWith('/register')) {
+      data.username = String(
+        data.username ??
+        data.userName ??
+        data.registerUsername ??
+        ''
+      ).trim().toLowerCase();
+
+      if (!/^[a-z0-9_]{3,24}$/.test(data.username)) {
+        setAuthMessage(
+          form,
+          'Username-ul trebuie să aibă între 3 și 24 de caractere și poate conține doar litere mici, cifre și underscore.'
+        );
+
+        const usernameInput =
+          $('#registerUsername', form) ||
+          $('[name="username"]', form);
+
+        if (usernameInput) usernameInput.focus();
+
+        return;
+      }
+    }
 
     if (submit) {
       submit.disabled = true;
       submit.style.opacity = '.65';
     }
 
-    if (status) status.textContent = '';
+    setAuthMessage(form, '');
 
     try {
       const result = await apiRequest(endpoint, {
@@ -354,9 +412,11 @@
       updateAccount(result.user);
 
       showToast(
-        `Logged in as @${result.user.username || result.user.name}!`,
+        `Logged in as @${result.user?.username || result.user?.name || 'user'}!`,
         'success'
       );
+
+      await initUser();
     } catch (error) {
       setAuthMessage(form, error.message);
     } finally {
@@ -365,31 +425,41 @@
         submit.style.opacity = '';
       }
 
-      if (!backdrop.hidden && !$('#verificationForm')) {
+      if (backdrop && !backdrop.hidden && !$('#verificationForm')) {
         await loadCaptcha();
       }
     }
   }
 
-  $('#closeAuth').addEventListener('click', () => {
-    closeAuth();
-    resetAuthModal();
-  });
+  const closeAuthButton = $('#closeAuth');
 
-  $('#closeSuccess').addEventListener('click', () => {
-    closeAuth();
-    resetAuthModal();
-  });
-
-  backdrop.addEventListener('click', event => {
-    if (event.target === backdrop) {
+  if (closeAuthButton) {
+    closeAuthButton.addEventListener('click', () => {
       closeAuth();
       resetAuthModal();
-    }
-  });
+    });
+  }
+
+  const closeSuccessButton = $('#closeSuccess');
+
+  if (closeSuccessButton) {
+    closeSuccessButton.addEventListener('click', () => {
+      closeAuth();
+      resetAuthModal();
+    });
+  }
+
+  if (backdrop) {
+    backdrop.addEventListener('click', event => {
+      if (event.target === backdrop) {
+        closeAuth();
+        resetAuthModal();
+      }
+    });
+  }
 
   document.addEventListener('keydown', event => {
-    if (event.key === 'Escape' && !backdrop.hidden) {
+    if (event.key === 'Escape' && backdrop && !backdrop.hidden) {
       closeAuth();
       resetAuthModal();
     }
@@ -411,20 +481,30 @@
   });
 
   $$('[data-auth-tab]').forEach(button => {
-    button.addEventListener('click', () => setAuthTab(button.dataset.authTab));
+    button.addEventListener('click', () => {
+      const verificationForm = $('#verificationForm');
+
+      if (verificationForm) verificationForm.remove();
+
+      setAuthTab(button.dataset.authTab);
+    });
   });
 
   $$('[data-refresh-captcha]').forEach(button => {
     button.addEventListener('click', loadCaptcha);
   });
 
-  loginForm.addEventListener('submit', event => {
-    handleAuthSubmit(event, loginForm, '/api/auth/login');
-  });
+  if (loginForm) {
+    loginForm.addEventListener('submit', event => {
+      handleAuthSubmit(event, loginForm, '/api/auth/login');
+    });
+  }
 
-  registerForm.addEventListener('submit', event => {
-    handleAuthSubmit(event, registerForm, '/api/auth/register');
-  });
+  if (registerForm) {
+    registerForm.addEventListener('submit', event => {
+      handleAuthSubmit(event, registerForm, '/api/auth/register');
+    });
+  }
 
   const logoutButton = $('#logoutButton');
 
@@ -448,14 +528,19 @@
 
   if (mobileToggle) {
     mobileToggle.addEventListener('click', () => {
-      const isOpen = $('#mobileNav').classList.toggle('is-open');
+      const mobileNav = $('#mobileNav');
+      if (!mobileNav) return;
+
+      const isOpen = mobileNav.classList.toggle('is-open');
       mobileToggle.setAttribute('aria-expanded', String(isOpen));
     });
   }
 
   $$('#mobileNav a').forEach(link => {
     link.addEventListener('click', () => {
-      $('#mobileNav').classList.remove('is-open');
+      const mobileNav = $('#mobileNav');
+
+      if (mobileNav) mobileNav.classList.remove('is-open');
       if (mobileToggle) mobileToggle.setAttribute('aria-expanded', 'false');
     });
   });
@@ -548,6 +633,7 @@
     if (url.searchParams.get('verified') === '1') {
       showToast('Email confirmat. Acum te poți conecta!', 'success');
       openAuth('login');
+
       url.searchParams.delete('verified');
       history.replaceState({}, '', url.pathname + url.hash);
     } else if (url.searchParams.get('verification_error') === '1') {
@@ -555,7 +641,9 @@
         'Linkul de confirmare este invalid sau a expirat. Încearcă din nou.',
         'error'
       );
+
       openAuth('register');
+
       url.searchParams.delete('verification_error');
       history.replaceState({}, '', url.pathname + url.hash);
     } else if (window.location.hash === '#auth') {
@@ -564,7 +652,10 @@
   }
 
   const currentYear = $('#currentYear');
-  if (currentYear) currentYear.textContent = String(new Date().getFullYear());
+
+  if (currentYear) {
+    currentYear.textContent = String(new Date().getFullYear());
+  }
 
   initReveal();
   initUser();
